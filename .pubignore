@@ -1,0 +1,69 @@
+# Generated and local tool output
+.dart_tool/
+build/
+**/build/
+coverage/
+**/coverage/
+doc/api/
+
+# Repository-only design and implementation plans. User-facing package
+# documentation under doc/ remains included because README links to it.
+docs/plans/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+
+# Root development lockfile for this library package
+/pubspec.lock
+
+# Local environment, credentials and signing material
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.jks
+*.keystore
+key.properties
+*.p12
+*.mobileprovision
+
+# Flutter and platform ephemeral output
+.flutter-plugins
+.flutter-plugins-dependencies
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/ephemeral/
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/android/local.properties
+**/ios/Pods/
+**/macos/Pods/
+**/.symlinks/
+**/xcuserdata/
+**/*.xcuserstate
+**/DerivedData/
+
+# Symbols and obfuscation maps
+app.*.symbols
+app.*.map.json
+
+# Local widget preview output
+.widget_preview/

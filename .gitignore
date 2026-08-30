@@ -1,0 +1,87 @@
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.atom/
+.history/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.class
+*.pyc
+
+# Dart and Flutter tooling
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+**/doc/api/
+
+# Build, test and benchmark output
+/build/
+**/build/
+/coverage/
+**/coverage/
+*.lcov
+
+# Root library lockfile. Applications under example/ keep their lockfile.
+/pubspec.lock
+
+# Flutter platform ephemeral files
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/ephemeral/
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Flutter/ephemeral/
+**/windows/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+
+# Android build variants and local SDK configuration
+**/android/local.properties
+**/android/**/debug/
+**/android/**/profile/
+**/android/**/release/
+
+# Apple dependency and user state
+**/ios/Pods/
+**/macos/Pods/
+**/.symlinks/
+**/xcuserdata/
+**/*.xcuserstate
+**/DerivedData/
+
+# Symbols, maps and obfuscation output
+app.*.symbols
+app.*.map.json
+
+# Flutter widget previews
+.widget_preview/
+
+# Local environment and secret files. Templates remain trackable.
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Local signing and credential material
+*.jks
+*.keystore
+key.properties
+*.p12
+*.mobileprovision
+
+# Local migration scratch directories
+migrate_working_dir/
