@@ -12,17 +12,17 @@ Both pictures put the same `Colors.transparent` to `Colors.black` overlay across
 
 ## Contents
 
-- [Installation](#installation)
-- [Quick start](#quick-start)
-- [Public API](#public-api)
-- [Low-level API](#low-level-api)
-- [Per-transition curves](#per-transition-curves)
-- [Color spaces](#color-spaces)
-- [Hard bands](#hard-bands-with-stepscurve)
-- [Edge fade](#edge-fade)
-- [Accuracy and performance](#accuracy-and-performance)
-- [Animation and inherited fields](#animation-and-inherited-fields)
-- [Maintainer documentation](#maintainer-documentation)
+- [Installation](https://github.com/BirjuVachhani/easing_gradient#installation)
+- [Quick start](https://github.com/BirjuVachhani/easing_gradient#quick-start)
+- [Public API](https://github.com/BirjuVachhani/easing_gradient#public-api)
+- [Low-level API](https://github.com/BirjuVachhani/easing_gradient#low-level-api)
+- [Per-transition curves](https://github.com/BirjuVachhani/easing_gradient#per-transition-curves)
+- [Color spaces](https://github.com/BirjuVachhani/easing_gradient#color-spaces)
+- [Hard bands](https://github.com/BirjuVachhani/easing_gradient#hard-bands-with-stepscurve)
+- [Edge fade](https://github.com/BirjuVachhani/easing_gradient#edge-fade)
+- [Accuracy and performance](https://github.com/BirjuVachhani/easing_gradient#accuracy-and-performance)
+- [Animation and inherited fields](https://github.com/BirjuVachhani/easing_gradient#animation-and-inherited-fields)
+- [Maintainer documentation](https://github.com/BirjuVachhani/easing_gradient#maintainer-documentation)
 
 ## Installation
 
@@ -257,7 +257,7 @@ flutter drive --profile \
   --driver test_driver/performance_driver.dart
 ```
 
-The harness writes raw JSON to `example/build/performance/gradient_benchmark.json`. See [the benchmark report](doc/benchmarks/gradient-performance.md) for workload details, metrics, limitations, and recorded results.
+The harness writes raw JSON to `example/build/performance/gradient_benchmark.json`. See [the benchmark report](https://github.com/BirjuVachhani/easing_gradient/blob/main/doc/benchmarks/gradient-performance.md) for workload details, metrics, limitations, and recorded results.
 
 ## Animation and inherited fields
 
@@ -267,8 +267,8 @@ Inherited operations such as `withOpacity`, `scale` and gradient interpolation r
 
 ## Maintainer documentation
 
-- [Codebase architecture and invariants](doc/architecture.md)
-- [Profile benchmark methodology and results](doc/benchmarks/gradient-performance.md)
+- [Codebase architecture and invariants](https://github.com/BirjuVachhani/easing_gradient/blob/main/doc/architecture.md)
+- [Profile benchmark methodology and results](https://github.com/BirjuVachhani/easing_gradient/blob/main/doc/benchmarks/gradient-performance.md)
 
 The figures in `doc/images/` are generated, not hand-drawn. Rebuild and losslessly optimize them after any change to sampling, color math, or figure content:
 
@@ -289,4 +289,4 @@ This is a Flutter port and expansion of:
 - [CSSWG issue 1332](https://github.com/w3c/csswg-drafts/issues/1332)
 - [OKLab](https://bottosson.github.io/posts/oklab/) by Bjorn Ottosson
 
-Released under the [BSD 3-Clause License](LICENSE). Upstream inspirations and their MIT notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Released under the [BSD 3-Clause License](https://github.com/BirjuVachhani/easing_gradient/blob/main/LICENSE). Upstream inspirations and their MIT notices are listed in [THIRD_PARTY_NOTICES.md](https://github.com/BirjuVachhani/easing_gradient/blob/main/THIRD_PARTY_NOTICES.md).
