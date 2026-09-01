@@ -6,7 +6,7 @@ Flutter's native gradients interpolate colors linearly. That is fast, but it mak
 
 | Flutter `LinearGradient` | `EasingLinearGradient` |
 | :---: | :---: |
-| ![A transparent-to-black scrim over a colorful backdrop, with a visible horizontal seam where the overlay begins](doc/images/scrim-native.png) | ![The same scrim eased with Curves.easeInOut, fading in with no visible beginning](doc/images/scrim-eased.png) |
+| ![A transparent-to-black scrim over a colorful backdrop, with a visible horizontal seam where the overlay begins](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/scrim-native.png) | ![The same scrim eased with Curves.easeInOut, fading in with no visible beginning](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/scrim-eased.png) |
 
 Both pictures put the same `Colors.transparent` to `Colors.black` overlay across the bottom 58 percent of the same backdrop. On the left, the straight alpha ramp changes slope the moment it starts, and the eye reads that corner as a line drawn across the image. On the right, `Curves.easeInOut` eases into the ramp, so the overlay has no visible beginning.
 
@@ -127,7 +127,7 @@ EasingLinearGradient(
 
 | One curve everywhere | A curve per transition |
 | :---: | :---: |
-| ![A four-color gradient with every transition eased by the same curve](doc/images/transitions-global.webp) | ![The same four colors with easeOutCubic, the global curve, and easeInCubic on the three transitions](doc/images/transitions-per-segment.webp) |
+| ![A four-color gradient with every transition eased by the same curve](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/transitions-global.webp) | ![The same four colors with easeOutCubic, the global curve, and easeInCubic on the three transitions](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/transitions-per-segment.webp) |
 
 ## Color spaces
 
@@ -137,11 +137,11 @@ Every preview below runs the same blue to yellow fade with `Curves.linear`, so o
 
 | Space | Preview | Best for |
 | --- | --- | --- |
-| `oklab` | ![Blue to yellow through a muted neutral midpoint](doc/images/space-oklab.webp) | The default. Perceptually even, vivid everyday fades. |
-| `oklch` | ![Blue to yellow sweeping through cyan and green](doc/images/space-oklch.webp) | Direct short-path hue sweeps and saturated rainbow effects. |
-| `linearRgb` | ![Blue to yellow with a brighter, lighter midpoint](doc/images/space-linear-rgb.webp) | Physically correct light mixing and parity with postcss-easing-gradients. |
-| `srgb` | ![Blue to yellow through a darker gray midpoint](doc/images/space-srgb.webp) | Native RGB-coordinate parity for opaque or equal-alpha endpoints. Differing alpha intentionally uses alpha-aware interpolation. |
-| `hsl` | ![Blue to yellow sweeping through saturated cyan and green](doc/images/space-hsl.webp) | Familiar CSS-style hue interpolation. Not perceptually uniform. |
+| `oklab` | ![Blue to yellow through a muted neutral midpoint](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/space-oklab.webp) | The default. Perceptually even, vivid everyday fades. |
+| `oklch` | ![Blue to yellow sweeping through cyan and green](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/space-oklch.webp) | Direct short-path hue sweeps and saturated rainbow effects. |
+| `linearRgb` | ![Blue to yellow with a brighter, lighter midpoint](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/space-linear-rgb.webp) | Physically correct light mixing and parity with postcss-easing-gradients. |
+| `srgb` | ![Blue to yellow through a darker gray midpoint](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/space-srgb.webp) | Native RGB-coordinate parity for opaque or equal-alpha endpoints. Differing alpha intentionally uses alpha-aware interpolation. |
+| `hsl` | ![Blue to yellow sweeping through saturated cyan and green](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/space-hsl.webp) | Familiar CSS-style hue interpolation. Not perceptually uniform. |
 
 Wide-gamut inputs are converted to sRGB before mixing. Output is sRGB because that is the common denominator accepted by Flutter's native gradient shaders. This conversion is lossy for colors outside sRGB. Intermediate output is independently channel-clipped rather than perceptually gamut-mapped, so highly chromatic paths can lose chroma or shift hue.
 
@@ -160,10 +160,10 @@ All four CSS positions are available. Each preview below runs `StepsCurve(5, pos
 
 | Position | Preview | Which endpoint colors get a band |
 | --- | --- | --- |
-| `jumpStart` | ![Five bands, the first already lifted off the start color and the last showing the full end color](doc/images/steps-jump-start.webp) | End only. |
-| `jumpEnd` | ![Five bands starting on the start color, the last stopping short of the end color](doc/images/steps-jump-end.webp) | Start only. This is the CSS default and the default here. |
-| `jumpBoth` | ![Five bands, neither the start nor the end color among them](doc/images/steps-jump-both.webp) | Neither. |
-| `jumpNone` | ![Five bands running from the start color to the end color](doc/images/steps-jump-none.webp) | Both. Usually the best looking choice, and it needs a count of at least 2. |
+| `jumpStart` | ![Five bands, the first already lifted off the start color and the last showing the full end color](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/steps-jump-start.webp) | End only. |
+| `jumpEnd` | ![Five bands starting on the start color, the last stopping short of the end color](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/steps-jump-end.webp) | Start only. This is the CSS default and the default here. |
+| `jumpBoth` | ![Five bands, neither the start nor the end color among them](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/steps-jump-both.webp) | Neither. |
+| `jumpNone` | ![Five bands running from the start color to the end color](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/steps-jump-none.webp) | Both. Usually the best looking choice, and it needs a count of at least 2. |
 
 ## Edge fade
 
@@ -175,13 +175,13 @@ A gradient also makes a good alpha mask. Combine `ShaderMask` with `BlendMode.ds
 
 | `LinearGradient` mask | `EasingLinearGradient` mask |
 | :---: | :---: |
-| ![Light paragraphs and text list tiles fading at a constant rate over a black background](doc/images/edge-fade-black-linear.webp) | ![The same light paragraphs and text list tiles fading smoothly over a black background](doc/images/edge-fade-black-eased.webp) |
+| ![Light paragraphs and text list tiles fading at a constant rate over a black background](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/edge-fade-black-linear.webp) | ![The same light paragraphs and text list tiles fading smoothly over a black background](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/edge-fade-black-eased.webp) |
 
 ### White background
 
 | `LinearGradient` mask | `EasingLinearGradient` mask |
 | :---: | :---: |
-| ![Dark paragraphs and text list tiles fading at a constant rate over a white background](doc/images/edge-fade-white-linear.webp) | ![The same dark paragraphs and text list tiles fading smoothly over a white background](doc/images/edge-fade-white-eased.webp) |
+| ![Dark paragraphs and text list tiles fading at a constant rate over a white background](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/edge-fade-white-linear.webp) | ![The same dark paragraphs and text list tiles fading smoothly over a white background](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/edge-fade-white-eased.webp) |
 
 The linear mask holds one constant alpha slope, so it begins hiding paragraph lines immediately at the edge and then stops abruptly where the ramp meets the opaque middle. That corner is the same artifact as the seam in the scrim at the top of this page. The eased mask starts and ends flat instead: paragraphs and list-tile labels stay legible closer to the edge, then fall away, and nothing marks where the fade ends.
 
@@ -241,7 +241,7 @@ There is no honest universal bound for every input. Polar spaces (OKLCH and HSL)
 
 | `samplesPerTransition: 3` | `samplesPerTransition: 15` |
 | :---: | :---: |
-| ![A sharply eased fade showing flat facets where straight segments meet](doc/images/density-coarse.webp) | ![The same fade at the default sample count, with no visible facets](doc/images/density-default.webp) |
+| ![A sharply eased fade showing flat facets where straight segments meet](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/density-coarse.webp) | ![The same fade at the default sample count, with no visible facets](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/density-default.webp) |
 
 Both strips use `Curves.easeInOutQuint`, whose steep middle is where a piecewise-linear approximation shows up first. Three interior samples leave visible flat facets. The default of fifteen does not.
 
