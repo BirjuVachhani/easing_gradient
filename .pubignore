@@ -10,6 +10,12 @@ doc/api/
 # documentation under doc/ remains included because README links to it.
 docs/plans/
 
+# Repository-only README figure source. The generated PNGs under doc/images/
+# remain published; this generator and its licensed font stay in Git.
+/tool/generate_readme_images.dart
+/tool/optimize_readme_images.py
+/tool/fonts/
+
 # Editor and operating-system files
 .DS_Store
 Thumbs.db

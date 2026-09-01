@@ -14,8 +14,11 @@ This guide explains how `easing_gradient` works, where responsibilities live, an
 | `test/` | Mathematical, API-contract, renderer-model, and approximation regression tests. |
 | `example/lib/main.dart` | Interactive Playground and Accuracy Lab. |
 | `example/lib/comparison_page.dart` | Fixed teaching catalog that compares curves, spaces, geometry, stops, and density. |
+| `example/lib/edge_fade_page.dart` | `ShaderMask` alpha-mask recipe and its live controls. |
 | `example/lib/benchmark/` | Profile-mode construction and frame benchmark workload. |
 | `example/integration_test/` | Device benchmark orchestration. |
+| `tool/generate_readme_images.dart` | Regenerates the README figures in `doc/images/`. |
+| `doc/images/` | Generated README figures. Edit the generator, never the PNGs. |
 | `docs/benchmarks/` | Recorded methodology, results, and interpretation limits. |
 
 ## End-to-end data flow
@@ -128,6 +131,12 @@ Flutter's inherited `scale`, `withOpacity`, `fromColor`, and interpolation metho
 
 The custom 700-pixel breakpoint is based on room for two legible preview cards, not a device category.
 
+### Edge fade
+
+`edge_fade_page.dart` demonstrates the gradient as an alpha mask rather than as paint. `EdgeFade` builds the mask in `build` and passes `createShader` to `ShaderMask`, because `ShaderMask` requests a shader on every paint and constructing the gradient inside the callback would resample the curve on every frame of a scroll.
+
+The preview keeps a real scrollable inside the mask so content is seen dissolving as it passes under the edge. The extent is clamped to a half so the two fades cannot cross and ask for descending stops.
+
 ### Playground
 
 Playground applies one set of interpolation controls to linear, radial, and sweep geometry. It is intended to show API consistency rather than benchmark performance.
@@ -156,6 +165,19 @@ One cached gradient object creates shaders for 64 animated tile rectangles every
 
 See `docs/benchmarks/gradient-performance.md` for the runnable command, JSON schema, recorded results, and limitations.
 
+## README figures
+
+`doc/images/` is generated output. `tool/generate_readme_images.dart` paints each figure straight onto a recorded canvas using the same public gradient objects a caller would build, so a figure cannot drift away from what the package actually renders.
+
+Most figures contain no text, and their labels live in the README tables around them. The edge-fade comparison deliberately uses readable paragraphs and text list tiles because fading letterforms demonstrates that recipe better than abstract bars. `flutter_test` normally substitutes the Ahem test font, so the generator loads the tracked Roboto Regular from `tool/fonts/` before painting those figures. Its provenance and Apache 2.0 license are stored beside the font. The generator and font are repository-only inputs excluded from the pub archive; their generated figures remain published. Regenerate and optimize with:
+
+```sh
+flutter test tool/generate_readme_images.dart
+python3 tool/optimize_readme_images.py
+```
+
+The optimizer first runs OxiPNG at maximum lossless compression with safe metadata stripping and no interlacing. It keeps the dithered hero scrims as PNG because they compress better there, and converts every other figure to exact lossless WebP. Before replacing a source PNG, it compares dimensions and decoded RGBA hashes. The optimized hybrid is smaller than either all-PNG or all-WebP output.
+
 ## Testing responsibilities
 
 - `color_space_test.dart`: conversion reference values, round trips, hue path, and alpha behavior.
@@ -163,7 +185,7 @@ See `docs/benchmarks/gradient-performance.md` for the runnable command, JSON sch
 - `steps_curve_test.dart`: every step position and duplicated hard-stop output.
 - `easing_gradient_test.dart`: Flutter subtype behavior, geometry forwarding, equality, inherited operations, shader creation, and widget rendering.
 - `approximation_accuracy_test.dart`: continuous CPU reference versus generated-stop renderer model.
-- `example/test/widget_test.dart`: navigation, lazy catalog coverage, and narrow/wide layout behavior.
+- `example/test/widget_test.dart`: navigation, lazy catalog coverage, narrow/wide layout behavior, and edge-fade mask construction.
 
 ## Change checklist
 
@@ -175,13 +197,16 @@ When changing sampling or color math:
 4. Verify transparent endpoints still have limiting-color guards.
 5. Generate API docs and resolve every warning.
 6. Run package and example analysis/tests.
-7. Re-run profile benchmarks if generated stop count or painting behavior changes.
+7. Regenerate the README figures, because they are rendered from the real sampler.
+8. Re-run profile benchmarks if generated stop count or painting behavior changes.
 
 Commands:
 
 ```sh
 flutter analyze
 flutter test
+flutter test tool/generate_readme_images.dart
+python3 tool/optimize_readme_images.py
 dart doc
 
 cd example

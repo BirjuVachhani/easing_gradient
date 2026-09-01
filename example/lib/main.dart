@@ -2,6 +2,7 @@ import 'package:easing_gradient/easing_gradient.dart';
 import 'package:flutter/material.dart';
 
 import 'comparison_page.dart';
+import 'edge_fade_page.dart';
 
 void main() => runApp(const EasingGradientDemo());
 
@@ -46,6 +47,7 @@ class _DemoHomeState extends State<_DemoHome> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       const ComparisonPage(),
+      const EdgeFadePage(),
       const _PlaygroundPage(),
       const _AccuracyLabPage(),
     ];
@@ -60,6 +62,7 @@ class _DemoHomeState extends State<_DemoHome> {
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.compare), label: 'Compare'),
+          NavigationDestination(icon: Icon(Icons.gradient), label: 'Edge fade'),
           NavigationDestination(icon: Icon(Icons.tune), label: 'Playground'),
           NavigationDestination(icon: Icon(Icons.science), label: 'Accuracy'),
         ],

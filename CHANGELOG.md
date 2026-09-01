@@ -8,7 +8,7 @@ Compatibility: Flutter 3.47.1 or newer, including Dart 3.13.1 or newer. The fram
 - Added premultiplied-alpha mixing and wide-gamut input normalization.
 - Added `StepsCurve` with all CSS step positions and exact hard stop generation.
 - Added accuracy regression tests against an exact 2,048-point CPU reference.
-- Added an interactive example app with comparison, playground and Accuracy Lab views.
+- Added an interactive example app with comparison, edge fade, playground and Accuracy Lab views.
 - Added reproducible profile-mode construction and frame-performance benchmarks.
 - Added comprehensive API, architecture, and benchmark documentation.
 - Released the package under the BSD 3-Clause License.

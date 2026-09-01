@@ -4,6 +4,12 @@ Silky smooth, dependency-free Flutter gradients shaped by any `Curve`.
 
 Flutter's native gradients interpolate colors linearly. That is fast, but it makes the beginning and end of a fade visibly hard, especially on the dark scrims behind text. `easing_gradient` precomputes a small set of intermediate stops that trace an easing curve, then hands those stops back to Flutter's native gradient shader.
 
+| Flutter `LinearGradient` | `EasingLinearGradient` |
+| :---: | :---: |
+| ![A transparent-to-black scrim over a colorful backdrop, with a visible horizontal seam where the overlay begins](doc/images/scrim-native.png) | ![The same scrim eased with Curves.easeInOut, fading in with no visible beginning](doc/images/scrim-eased.png) |
+
+Both pictures put the same `Colors.transparent` to `Colors.black` overlay across the bottom 58 percent of the same backdrop. On the left, the straight alpha ramp changes slope the moment it starts, and the eye reads that corner as a line drawn across the image. On the right, `Curves.easeInOut` eases into the ramp, so the overlay has no visible beginning.
+
 ## Contents
 
 - [Installation](#installation)
@@ -13,6 +19,7 @@ Flutter's native gradients interpolate colors linearly. That is fast, but it mak
 - [Per-transition curves](#per-transition-curves)
 - [Color spaces](#color-spaces)
 - [Hard bands](#hard-bands-with-stepscurve)
+- [Edge fade](#edge-fade)
 - [Accuracy and performance](#accuracy-and-performance)
 - [Animation and inherited fields](#animation-and-inherited-fields)
 - [Maintainer documentation](#maintainer-documentation)
@@ -118,17 +125,23 @@ EasingLinearGradient(
 
 `transitionCurves` must contain exactly `colors.length - 1` entries.
 
+| One curve everywhere | A curve per transition |
+| :---: | :---: |
+| ![A four-color gradient with every transition eased by the same curve](doc/images/transitions-global.webp) | ![The same four colors with easeOutCubic, the global curve, and easeInCubic on the three transitions](doc/images/transitions-per-segment.webp) |
+
 ## Color spaces
 
 Intermediate colors are computed without dependencies. Non-hue components are alpha-weighted before interpolation, so rectangular-space fades such as white to transparent black remain white as alpha falls. In OKLCH and HSL, hue follows a separate angular path, so a fully transparent chromatic endpoint can still influence hue.
 
-| Space | Best for |
-| --- | --- |
-| `oklab` | The default. Perceptually even, vivid everyday fades. |
-| `oklch` | Direct short-path hue sweeps and saturated rainbow effects. |
-| `linearRgb` | Physically correct light mixing and parity with postcss-easing-gradients. |
-| `srgb` | Native RGB-coordinate parity for opaque or equal-alpha endpoints. Differing alpha intentionally uses alpha-aware interpolation. |
-| `hsl` | Familiar CSS-style hue interpolation. Not perceptually uniform. |
+Every preview below runs the same blue to yellow fade with `Curves.linear`, so only the route between the endpoints changes.
+
+| Space | Preview | Best for |
+| --- | --- | --- |
+| `oklab` | ![Blue to yellow through a muted neutral midpoint](doc/images/space-oklab.webp) | The default. Perceptually even, vivid everyday fades. |
+| `oklch` | ![Blue to yellow sweeping through cyan and green](doc/images/space-oklch.webp) | Direct short-path hue sweeps and saturated rainbow effects. |
+| `linearRgb` | ![Blue to yellow with a brighter, lighter midpoint](doc/images/space-linear-rgb.webp) | Physically correct light mixing and parity with postcss-easing-gradients. |
+| `srgb` | ![Blue to yellow through a darker gray midpoint](doc/images/space-srgb.webp) | Native RGB-coordinate parity for opaque or equal-alpha endpoints. Differing alpha intentionally uses alpha-aware interpolation. |
+| `hsl` | ![Blue to yellow sweeping through saturated cyan and green](doc/images/space-hsl.webp) | Familiar CSS-style hue interpolation. Not perceptually uniform. |
 
 Wide-gamut inputs are converted to sRGB before mixing. Output is sRGB because that is the common denominator accepted by Flutter's native gradient shaders. This conversion is lossy for colors outside sRGB. Intermediate output is independently channel-clipped rather than perceptually gamut-mapped, so highly chromatic paths can lose chroma or shift hue.
 
@@ -143,7 +156,78 @@ EasingLinearGradient(
 )
 ```
 
-All four CSS positions are available: `jumpStart`, `jumpEnd`, `jumpBoth` and `jumpNone`.
+All four CSS positions are available. Each preview below runs `StepsCurve(5, position: ...)` from a near-black to orange.
+
+| Position | Preview | Which endpoint colors get a band |
+| --- | --- | --- |
+| `jumpStart` | ![Five bands, the first already lifted off the start color and the last showing the full end color](doc/images/steps-jump-start.webp) | End only. |
+| `jumpEnd` | ![Five bands starting on the start color, the last stopping short of the end color](doc/images/steps-jump-end.webp) | Start only. This is the CSS default and the default here. |
+| `jumpBoth` | ![Five bands, neither the start nor the end color among them](doc/images/steps-jump-both.webp) | Neither. |
+| `jumpNone` | ![Five bands running from the start color to the end color](doc/images/steps-jump-none.webp) | Both. Usually the best looking choice, and it needs a count of at least 2. |
+
+## Edge fade
+
+A gradient also makes a good alpha mask. Combine `ShaderMask` with `BlendMode.dstIn` and a scrollable's edges dissolve into whatever sits behind them, instead of stopping at a hard viewport edge.
+
+`BlendMode.dstIn` multiplies the child's alpha by the mask's alpha and keeps the child's colors, so only the mask's alpha channel matters and its opaque color is arbitrary. Each edge below is a literal two-color gradient: transparent to opaque at the top, and opaque to transparent at the bottom. Both sides use identical content, colors, geometry, and extents. Only the gradient class differs:
+
+### Black background
+
+| `LinearGradient` mask | `EasingLinearGradient` mask |
+| :---: | :---: |
+| ![Light paragraphs and text list tiles fading at a constant rate over a black background](doc/images/edge-fade-black-linear.webp) | ![The same light paragraphs and text list tiles fading smoothly over a black background](doc/images/edge-fade-black-eased.webp) |
+
+### White background
+
+| `LinearGradient` mask | `EasingLinearGradient` mask |
+| :---: | :---: |
+| ![Dark paragraphs and text list tiles fading at a constant rate over a white background](doc/images/edge-fade-white-linear.webp) | ![The same dark paragraphs and text list tiles fading smoothly over a white background](doc/images/edge-fade-white-eased.webp) |
+
+The linear mask holds one constant alpha slope, so it begins hiding paragraph lines immediately at the edge and then stops abruptly where the ramp meets the opaque middle. That corner is the same artifact as the seam in the scrim at the top of this page. The eased mask starts and ends flat instead: paragraphs and list-tile labels stay legible closer to the edge, then fall away, and nothing marks where the fade ends.
+
+All four figures have no tile or paragraph background fills. They render the same text, accent dots, geometry, and 30 percent edge extent directly on black or white. The larger extent spreads each alpha ramp across more paragraph baselines for a smoother transition.
+
+```dart
+// Sampled once per build, not once per frame.
+final topFade = EasingLinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: const [Colors.transparent, Colors.black],
+);
+final bottomFade = EasingLinearGradient(
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+  colors: const [Colors.black, Colors.transparent],
+);
+
+return LayoutBuilder(
+  builder: (context, constraints) {
+    final height = constraints.maxHeight;
+    final top = Rect.fromLTWH(0, 0, constraints.maxWidth, height * 0.30);
+    final bottom = Rect.fromLTWH(
+      0,
+      height * 0.70,
+      constraints.maxWidth,
+      height * 0.30,
+    );
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (_) => topFade.createShader(top),
+      child: ShaderMask(
+        blendMode: BlendMode.dstIn,
+        shaderCallback: (_) => bottomFade.createShader(bottom),
+        child: ListView.builder(...),
+      ),
+    );
+  },
+);
+```
+
+Swap `begin` and `end` for `Alignment.centerLeft` and `Alignment.centerRight` to fade a horizontal list.
+
+Build both gradients outside the callbacks and only call `createShader` inside them, as above. `ShaderMask` asks for a shader on every paint, so constructing an easing gradient inside a callback would resample the curve on every frame of a scroll.
+
+The example app's Edge fade tab has a live version with controls for the fade extent and curve, plus a side-by-side comparison against a linear mask.
 
 ## Accuracy and performance
 
@@ -154,6 +238,12 @@ Sampling happens synchronously every time a factory or `easeColorStops` is calle
 Automated tests compare the sampled result against an exact 2,049-position CPU reference using Flutter's native straight-RGBA stop interpolation, then compare the premultiplied visible output. Fully transparent endpoints receive a zero-width limiting-color stop before the caller's exact endpoint, preventing hidden RGB from leaking into the final interval. For the recommended defaults (`Curves.easeInOut`, OKLab, 15 extra stops), worst visible channel error stays below one 8-bit color step on a demanding color-to-transparent fade. sRGB and linear RGB do too.
 
 There is no honest universal bound for every input. Polar spaces (OKLCH and HSL), out-of-gamut colors and sharply overshooting curves introduce clipping between samples. Raise `samplesPerTransition` to 31 or 63 when using `Curves.easeInOutQuint`, elastic/back curves or highly saturated OKLCH paths. The example app's Accuracy Lab draws the sampled result, an exact per-column CPU reference and an amplified difference strip so the tradeoff is directly visible.
+
+| `samplesPerTransition: 3` | `samplesPerTransition: 15` |
+| :---: | :---: |
+| ![A sharply eased fade showing flat facets where straight segments meet](doc/images/density-coarse.webp) | ![The same fade at the default sample count, with no visible facets](doc/images/density-default.webp) |
+
+Both strips use `Curves.easeInOutQuint`, whose steep middle is where a piecewise-linear approximation shows up first. Three interior samples leave visible flat facets. The default of fifteen does not.
 
 A CPU color lookup texture was rejected because it loses native dithering and needs image lifecycle management. An analytic fragment shader was rejected because it cannot support arbitrary Dart `Curve` implementations, adds per-pixel math, needs async asset precaching and requires backend-specific testing. Both add more complexity for worse practical tradeoffs on the normal path.
 
@@ -179,6 +269,15 @@ Inherited operations such as `withOpacity`, `scale` and gradient interpolation r
 
 - [Codebase architecture and invariants](doc/architecture.md)
 - [Profile benchmark methodology and results](doc/benchmarks/gradient-performance.md)
+
+The figures in `doc/images/` are generated, not hand-drawn. Rebuild and losslessly optimize them after any change to sampling, color math, or figure content:
+
+```sh
+flutter test tool/generate_readme_images.dart
+python3 tool/optimize_readme_images.py
+```
+
+The optimizer requires OxiPNG, the WebP command-line tools, and Pillow. It verifies decoded RGBA bytes before replacing a PNG with lossless WebP. The dithered hero scrims remain PNG because they compress better in that format.
 
 ## Credits
 
