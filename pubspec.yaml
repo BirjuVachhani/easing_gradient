@@ -3,20 +3,15 @@ description: >-
   Silky smooth gradients with easing curves. Drop-in easing versions of
   LinearGradient, RadialGradient and SweepGradient that remove hard gradient
   edges, with OKLab, linear RGB and HSL interpolation and premultiplied alpha.
+
 version: 0.2.0
+
 homepage: https://github.com/BirjuVachhani/easing_gradient
 repository: https://github.com/BirjuVachhani/easing_gradient
 issue_tracker: https://github.com/BirjuVachhani/easing_gradient/issues
 
-topics:
-  - gradient
-  - easing
-  - color
-  - ui
-  - animation
-
 environment:
-  sdk: ^3.13.1
+  sdk: ^3.13.0
   # Flutter 3.27 introduced the floating-point Color API used here, but Dart
   # 3.13.1 ships with Flutter 3.47.1. The Dart constraint therefore sets the
   # effective stable Flutter minimum.
@@ -32,3 +27,10 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+
+topics:
+  - gradient
+  - easing
+  - color
+  - ui
+  - animation

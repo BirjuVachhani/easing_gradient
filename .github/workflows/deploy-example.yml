@@ -1,0 +1,94 @@
+name: Deploy example site
+
+# Publishes the example app to GitHub Pages at
+# https://birjuvachhani.github.io/easing_gradient/ on every push to main.
+#
+# One-time setup: in Settings > Pages, set "Source" to "GitHub Actions".
+# Without that the deploy step fails, because Pages will not accept an
+# artifact while it is still configured to serve a branch.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # deploy-pages authenticates with an OIDC token rather than a PAT.
+  pages: write
+  id-token: write
+
+# Queue deployments instead of cancelling them. Interrupting a Pages
+# deployment leaves the live site on whichever build was already there.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: example
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Pinned so a Flutter release cannot change the published site on
+          # its own. Bump alongside the SDK floor in the root pubspec.yaml.
+          flutter-version: 3.47.4
+          channel: stable
+          cache: true
+
+      # The example depends on the package by relative path, so this resolves
+      # the library from the checkout rather than from pub.dev.
+      - name: Install dependencies
+        run: flutter pub get
+
+      # web/shiki_tokenize_worker.js is committed, but regenerating it keeps
+      # the worker in step with whichever shiki_flutter version pub just
+      # resolved. `flutter pub run` rather than `dart run`, which cannot
+      # resolve the Flutter SDK dependencies this package pulls in.
+      - name: Regenerate the syntax highlighting worker
+        run: flutter pub run shiki_flutter:install
+
+      - name: Analyze and test
+        run: |
+          flutter analyze
+          flutter test
+
+      # A project page is served from /<repo>/, so the base href has to match
+      # or every asset request resolves against the domain root and misses.
+      # Change this if the site ever moves to a custom domain, where the base
+      # href becomes "/".
+      #
+      # No --wasm here: skwasm needs cross-origin isolation headers, and
+      # Pages serves static files without letting you set response headers.
+      - name: Build the web app
+        env:
+          # Passed through the environment rather than interpolated into the
+          # command, so the value reaches the shell as data.
+          BASE_HREF: /${{ github.event.repository.name }}/
+        run: flutter build web --release --base-href="$BASE_HREF"
+
+      # The site uses path URLs, so /docs is a route with no file behind it.
+      # Pages serves 404.html for any path it cannot find, so an identical
+      # copy of index.html hands those URLs to the router instead of showing
+      # the default Pages error page. This is what makes deep links and
+      # refreshes work.
+      - name: Add the single-page fallback
+        run: cp build/web/index.html build/web/404.html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: example/build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
