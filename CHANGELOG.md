@@ -6,6 +6,7 @@ Compatibility is unchanged from 0.1.0: Flutter 3.47.1 or newer, including Dart 3
 - Kept wide-gamut input in extended-sRGB working coordinates through mixing and converted to the chosen output primaries before any bounded-gamut clipping, so opting in converts colors rather than relabelling them. Alpha stays bounded in every output space.
 - Documented that HSL keeps a bounded sRGB working space for CSS parity, so choosing a wide-gamut output does not make HSL interpolation gamut-preserving.
 - Documented backend precision limits and separated approximation-error measurements from visible banding claims.
+- Led the README with the example site's travel card, comparing a photograph dissolved by a linear mask against the same mask eased.
 - Rebuilt the example as a website: sticky top nav with addressable per-page URLs, centered content column, dark and light themes, bundled Geist typography, and demos laid out beside their controls.
 - Added a landing page built around a photo card whose caption scrim is masked by a live, adjustable easing curve, alongside side-by-side native and eased comparisons.
 - Added a documentation page, and moved the gradient galleries behind their own destinations.

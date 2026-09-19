@@ -2,13 +2,27 @@
 
 Silky smooth, dependency-free Flutter gradients shaped by any `Curve`.
 
-Flutter's native gradients interpolate colors linearly. That is fast, but it makes the beginning and end of a fade visibly hard, especially on the dark scrims behind text. `easing_gradient` precomputes a small set of intermediate stops that trace an easing curve, then hands those stops back to Flutter's native gradient shader.
+Flutter's native gradients interpolate colors linearly. That is fast, but it makes the beginning and end of a fade visibly hard, whether you are dissolving a photograph into a card or laying a dark scrim behind text. `easing_gradient` precomputes a small set of intermediate stops that trace an easing curve, then hands those stops back to Flutter's native gradient shader.
 
 | Flutter `LinearGradient` | `EasingLinearGradient` |
 | :---: | :---: |
-| ![A transparent-to-black scrim over a colorful backdrop, with a visible horizontal seam where the overlay begins](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/scrim-native.png) | ![The same scrim eased with Curves.easeInOut, fading in with no visible beginning](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/scrim-eased.png) |
+| ![A travel card whose photograph fades out at a constant rate, thinning evenly from the moment the fade begins](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/photo-card-native.webp) | ![The same travel card eased with Curves.easeInOut, holding the photograph longer and releasing it without a defined start](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/photo-card-eased.webp) |
 
-Both pictures put the same `Colors.transparent` to `Colors.black` overlay across the bottom 58 percent of the same backdrop. On the left, the straight alpha ramp changes slope the moment it starts, and the eye reads that corner as a line drawn across the image. On the right, `Curves.easeInOut` eases into the ramp, so the overlay has no visible beginning.
+Both cards dissolve the same photograph into the same dark surface with one `BlendMode.dstIn` alpha mask, holding the image solid to 15 percent of the card and releasing it by 75 percent. On the left the alpha falls at a constant rate, so the ramp changes slope the moment it begins and the picture thins out evenly from there. On the right that same span follows `Curves.easeInOut`, so the image keeps its detail further down the card and then lets go without a point you can put a finger on. Through the middle of the fade the two differ by up to 26 of 255 levels per channel.
+
+```dart
+ShaderMask(
+  blendMode: BlendMode.dstIn,
+  shaderCallback: EasingLinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    // Only alpha survives dstIn, so the opaque color is arbitrary.
+    colors: const [Colors.black, Colors.black, Colors.transparent],
+    stops: const [0, 0.15, 0.75],
+  ).createShader,
+  child: Image.asset('travel/osaka.webp', fit: BoxFit.cover),
+)
+```
 
 ## Contents
 
@@ -58,6 +72,14 @@ Container(
 ```
 
 The default curve is `Curves.easeInOut`, exactly the cubic bezier used by the original React Native implementation. The default color space is OKLab, which produces visually even, vivid transitions.
+
+That one substitution is the whole difference below. Both pictures lay the same transparent-to-black overlay across the bottom 58 percent of the same backdrop:
+
+| Flutter `LinearGradient` | `EasingLinearGradient` |
+| :---: | :---: |
+| ![A transparent-to-black scrim over a colorful backdrop, with a visible horizontal seam where the overlay begins](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/scrim-native.png) | ![The same scrim eased with Curves.easeInOut, fading in with no visible beginning](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/scrim-eased.png) |
+
+On the left the straight alpha ramp changes slope the moment it starts, and the eye reads that corner as a line drawn across the image. On the right the overlay has no visible beginning. A scrim is the unflattering case for a linear ramp: the shorter it is, the steeper its slope has to be, and the more obvious the corner where it starts.
 
 Radial and sweep gradients have the same API:
 
@@ -302,5 +324,7 @@ This is a Flutter port and expansion of:
 - [react-native-easing-gradient](https://github.com/phamfoo/react-native-easing-gradient)
 - [CSSWG issue 1332](https://github.com/w3c/csswg-drafts/issues/1332)
 - [OKLab](https://bottosson.github.io/posts/oklab/) by Bjorn Ottosson
+
+The travel card photograph is Osaka Castle by Wikimedia Commons user [Syced](https://commons.wikimedia.org/wiki/User:Syced), from [File:Osaka castle 9.jpg](https://commons.wikimedia.org/wiki/File:Osaka_castle_9.jpg), released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/deed.en). No attribution is required; this credit is here because it is the decent thing to do.
 
 Released under the [BSD 3-Clause License](https://github.com/BirjuVachhani/easing_gradient/blob/main/LICENSE). Upstream inspirations and their MIT notices are listed in [THIRD_PARTY_NOTICES.md](https://github.com/BirjuVachhani/easing_gradient/blob/main/THIRD_PARTY_NOTICES.md).

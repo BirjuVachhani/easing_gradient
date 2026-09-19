@@ -3,10 +3,10 @@
 
 Run after `flutter test tool/generate_readme_images.dart`.
 
-The two dithered hero scrims compress better as PNG. Every other figure is
-converted to exact lossless WebP, then its source PNG is removed. Decoded RGBA
-bytes are compared before replacing a file, so a codec or tool change cannot
-silently alter pixels.
+The two dithered hero scrims compress better as PNG. Every other figure,
+including the photographic cards, is converted to exact lossless WebP and its
+source PNG removed. Decoded RGBA bytes are compared before replacing a file, so
+a codec or tool change cannot silently alter pixels.
 """
 
 from __future__ import annotations
