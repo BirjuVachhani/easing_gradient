@@ -3,7 +3,7 @@ description: >-
   Silky smooth gradients with easing curves. Drop-in easing versions of
   LinearGradient, RadialGradient and SweepGradient that remove hard gradient
   edges, with OKLab, linear RGB and HSL interpolation and premultiplied alpha.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/BirjuVachhani/easing_gradient
 repository: https://github.com/BirjuVachhani/easing_gradient
 issue_tracker: https://github.com/BirjuVachhani/easing_gradient/issues

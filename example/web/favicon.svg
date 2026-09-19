@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="easing_gradient">
+  <title>easing_gradient</title>
+  <defs>
+    <!-- Runs corner to corner, so the anti-diagonal the easing curve follows
+         sits on a near-constant mid tone and the stroke keeps even contrast
+         along its whole length. -->
+    <linearGradient id="eg-fill" x1="0" y1="0" x2="256" y2="256"
+                    gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F7C27A"/>
+      <stop offset="0.36" stop-color="#EF6E72"/>
+      <stop offset="0.7" stop-color="#7D53C4"/>
+      <stop offset="1" stop-color="#16204A"/>
+    </linearGradient>
+  </defs>
+  <!-- Superellipse |x/r|^5 + |y/r|^5 = 1, the squircle exponent iOS and
+       Flutter's RSuperellipse sit around, not a rounded rectangle. -->
+  <path d="M246.0 128.0C246.0 139.8 246.3 151.6 245.9 163.4C245.6 175.2 246.7 187.4 244.1 198.7C241.6 209.9 238.3 223.2 230.7 230.7C223.2 238.3 209.9 241.6 198.7 244.1C187.4 246.7 175.2 245.6 163.4 245.9C151.6 246.3 139.8 246.0 128.0 246.0C116.2 246.0 104.4 246.3 92.6 245.9C80.8 245.6 68.6 246.7 57.3 244.1C46.1 241.6 32.8 238.3 25.3 230.7C17.7 223.2 14.4 209.9 11.9 198.7C9.3 187.4 10.4 175.2 10.1 163.4C9.7 151.6 10.0 139.8 10.0 128.0C10.0 116.2 9.7 104.4 10.1 92.6C10.4 80.8 9.3 68.6 11.9 57.3C14.4 46.1 17.7 32.8 25.3 25.3C32.8 17.7 46.1 14.4 57.3 11.9C68.6 9.3 80.8 10.4 92.6 10.1C104.4 9.7 116.2 10.0 128.0 10.0C139.8 10.0 151.6 9.7 163.4 10.1C175.2 10.4 187.4 9.3 198.7 11.9C209.9 14.4 223.2 17.7 230.7 25.3C238.3 32.8 241.6 46.1 244.1 57.3C246.7 68.6 245.6 80.8 245.9 92.6C246.3 104.4 246.0 116.2 246.0 128.0Z" fill="url(#eg-fill)"/>
+  <!-- cubic-bezier(0.42, 0, 0.58, 1): Curves.easeInOut, drawn as the curve
+       itself rather than as a symbol for one. -->
+  <path d="M70 186C118.7 186 137.3 70 186 70" fill="none" stroke="#FFFFFF"
+        stroke-width="20" stroke-linecap="round" stroke-opacity="0.95"/>
+</svg>

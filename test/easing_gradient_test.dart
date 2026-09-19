@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ColorSpace;
 
 import 'package:easing_gradient/easing_gradient.dart';
 import 'package:flutter/material.dart';
@@ -116,6 +117,121 @@ void main() {
     expect(middle, isNotNull);
     expect(middle, isA<LinearGradient>());
     expect(middle!.colors.length, greaterThanOrEqualTo(a.colors.length));
+  });
+
+  // The conversion math itself is covered in color_space_test.dart. These
+  // cases only prove the option reaches generated stops through every public
+  // wrapper and participates in each wrapper's value identity.
+  group('output color space', () {
+    const p3Red = Color.from(
+      alpha: 1,
+      red: 1,
+      green: 0,
+      blue: 0,
+      colorSpace: ColorSpace.displayP3,
+    );
+    const p3Green = Color.from(
+      alpha: 1,
+      red: 0,
+      green: 1,
+      blue: 0,
+      colorSpace: ColorSpace.displayP3,
+    );
+    const wide = <Color>[p3Red, p3Green];
+
+    Set<ColorSpace> spacesOf(Gradient gradient) =>
+        gradient.colors.map((color) => color.colorSpace).toSet();
+
+    test('every wrapper defaults to bounded sRGB output', () {
+      final linear = EasingLinearGradient(colors: wide);
+      final radial = EasingRadialGradient(colors: wide);
+      final sweep = EasingSweepGradient(colors: wide);
+
+      for (final gradient in <Gradient>[linear, radial, sweep]) {
+        expect(
+          spacesOf(gradient),
+          {ColorSpace.sRGB},
+          reason:
+              'Callers who never mention output encoding must keep getting '
+              'sRGB stops, so adding the option cannot change existing paint.',
+        );
+      }
+      expect(linear.outputColorSpace, ColorSpace.sRGB);
+      expect(radial.outputColorSpace, ColorSpace.sRGB);
+      expect(sweep.outputColorSpace, ColorSpace.sRGB);
+    });
+
+    test('every wrapper forwards the requested space to generated stops', () {
+      final linear = EasingLinearGradient(
+        colors: wide,
+        outputColorSpace: ColorSpace.displayP3,
+      );
+      final radial = EasingRadialGradient(
+        colors: wide,
+        outputColorSpace: ColorSpace.displayP3,
+      );
+      final sweep = EasingSweepGradient(
+        colors: wide,
+        outputColorSpace: ColorSpace.displayP3,
+      );
+
+      for (final gradient in <Gradient>[linear, radial, sweep]) {
+        expect(
+          spacesOf(gradient),
+          {ColorSpace.displayP3},
+          reason:
+              'Interior samples and endpoints share one encoding, so the '
+              'shader never mixes stops from two different gamuts.',
+        );
+        // P3 red survives the round trip instead of being clipped to sRGB.
+        expect(gradient.colors.first.r, closeTo(1, 1e-6));
+        expect(gradient.colors.first.g, closeTo(0, 1e-6));
+      }
+    });
+
+    test('extended sRGB keeps out-of-gamut channels rather than clipping', () {
+      final gradient = EasingLinearGradient(
+        colors: wide,
+        outputColorSpace: ColorSpace.extendedSRGB,
+      );
+      expect(spacesOf(gradient), {ColorSpace.extendedSRGB});
+      // P3 red sits outside the sRGB cube, so its extended encoding must keep
+      // a red channel above one and negative green and blue.
+      expect(gradient.colors.first.r, greaterThan(1));
+      expect(gradient.colors.first.g, lessThan(0));
+      expect(gradient.colors.first.b, lessThan(0));
+      expect(
+        gradient.colors.every((color) => color.a >= 0 && color.a <= 1),
+        isTrue,
+        reason:
+            'Extended encoding widens the color channels only; alpha stays '
+            'bounded because values outside zero to one are not compositable.',
+      );
+    });
+
+    test('output space participates in equality, hash and toString', () {
+      final srgb = EasingLinearGradient(colors: wide);
+      final p3 = EasingLinearGradient(
+        colors: wide,
+        outputColorSpace: ColorSpace.displayP3,
+      );
+      final sameP3 = EasingLinearGradient(
+        colors: wide,
+        outputColorSpace: ColorSpace.displayP3,
+      );
+
+      expect(p3, sameP3);
+      expect(p3.hashCode, sameP3.hashCode);
+      expect(
+        p3,
+        isNot(srgb),
+        reason:
+            'Two gradients that paint different encodings are different '
+            'configurations, so caching one must not serve the other.',
+      );
+      expect(p3.toString(), contains('outputColorSpace: displayP3'));
+      expect(srgb.toString(), contains('outputColorSpace: sRGB'));
+    });
   });
 
   testWidgets('renders inside BoxDecoration without exceptions', (

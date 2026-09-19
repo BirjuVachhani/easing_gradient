@@ -7,6 +7,28 @@ import 'package:flutter_test/flutter_test.dart';
 // regression tests for the conversion primitives, which remain package-private.
 import 'package:easing_gradient/src/color_space.dart';
 
+void expectChannels(
+  Color actual,
+  (double, double, double) expected,
+  double tolerance,
+) {
+  expect(
+    actual.r,
+    closeTo(expected.$1, tolerance),
+    reason: 'Red must match the independently specified channel value.',
+  );
+  expect(
+    actual.g,
+    closeTo(expected.$2, tolerance),
+    reason: 'Green must match the independently specified channel value.',
+  );
+  expect(
+    actual.b,
+    closeTo(expected.$3, tolerance),
+    reason: 'Blue must match the independently specified channel value.',
+  );
+}
+
 void main() {
   group('sRGB transfer function', () {
     test('round-trips representative and boundary values', () {
@@ -107,6 +129,270 @@ void main() {
       expect(middle.r, greaterThan(0.98));
       expect(middle.g, lessThan(0.05));
       expect(middle.b, lessThan(0.05));
+    });
+  });
+
+  group('output color space', () {
+    const p3Red = Color.from(
+      alpha: 1,
+      red: 1,
+      green: 0,
+      blue: 0,
+      colorSpace: ColorSpace.displayP3,
+    );
+    const p3Green = Color.from(
+      alpha: 1,
+      red: 0,
+      green: 1,
+      blue: 0,
+      colorSpace: ColorSpace.displayP3,
+    );
+
+    test('matches independent CSS D65 primary conversion fixtures', () {
+      // Derived from CSS Color 4 rational XYZ matrices and signed transfer,
+      // not from Color.withValues or the conversion under test.
+      final p3 = mixColors(
+        const Color(0xFFFF0000),
+        p3Red,
+        0,
+        EasingColorSpace.srgb,
+        outputColorSpace: ColorSpace.displayP3,
+      );
+      expect(
+        p3.colorSpace,
+        ColorSpace.displayP3,
+        reason: 'The selected output must be explicitly tagged.',
+      );
+      expectChannels(p3, (
+        0.9174875573251656,
+        0.20028680774084695,
+        0.13856059121111408,
+      ), 1e-12);
+      final extended = mixColors(
+        p3Red,
+        p3Red,
+        0,
+        EasingColorSpace.srgb,
+        outputColorSpace: ColorSpace.extendedSRGB,
+      );
+      expect(
+        extended.colorSpace,
+        ColorSpace.extendedSRGB,
+        reason: 'P3 primaries must remain unbounded in extended sRGB.',
+      );
+      expectChannels(extended, (
+        1.0930663624351615,
+        -0.22674197356975417,
+        -0.15013458093711954,
+      ), 1e-12);
+      final roundTrip = mixColors(
+        extended,
+        extended,
+        1,
+        EasingColorSpace.srgb,
+        outputColorSpace: ColorSpace.displayP3,
+      );
+      expectChannels(roundTrip, (1, 0, 0), 1e-12);
+    });
+
+    test('keeps P3 chroma through rectangular and OKLCH paths', () {
+      for (final space in EasingColorSpace.values.where(
+        (s) => s != EasingColorSpace.hsl,
+      )) {
+        for (final original in [p3Red, p3Green]) {
+          final result = mixColors(
+            original,
+            original,
+            0.5,
+            space,
+            outputColorSpace: ColorSpace.displayP3,
+          );
+          expectChannels(result, (original.r, original.g, original.b), 2e-6);
+          expect(
+            result.colorSpace,
+            ColorSpace.displayP3,
+            reason: 'Every interior sample must use the selected encoding.',
+          );
+        }
+      }
+    });
+
+    test('normalizes mixed input encodings before interpolation', () {
+      const extendedRed = Color.from(
+        alpha: 1,
+        red: 1.0930663624351615,
+        green: -0.22674197356975417,
+        blue: -0.15013458093711954,
+        colorSpace: ColorSpace.extendedSRGB,
+      );
+      for (final space in [
+        EasingColorSpace.srgb,
+        EasingColorSpace.linearRgb,
+        EasingColorSpace.oklab,
+      ]) {
+        final result = mixColors(
+          p3Red,
+          extendedRed,
+          0.5,
+          space,
+          outputColorSpace: ColorSpace.displayP3,
+        );
+        expectChannels(result, (1, 0, 0), 2e-6);
+        final reversed = mixColors(
+          extendedRed,
+          p3Red,
+          0.5,
+          space,
+          outputColorSpace: ColorSpace.displayP3,
+        );
+        expectChannels(reversed, (result.r, result.g, result.b), 1e-12);
+      }
+    });
+
+    test('retains extended negatives and overshoot but clamps alpha', () {
+      const from = Color.from(
+        alpha: 0.25,
+        red: -0.2,
+        green: 0.3,
+        blue: 1.4,
+        colorSpace: ColorSpace.extendedSRGB,
+      );
+      const to = Color.from(
+        alpha: 0.75,
+        red: -0.2,
+        green: 0.3,
+        blue: 1.4,
+        colorSpace: ColorSpace.extendedSRGB,
+      );
+      for (final space in [
+        EasingColorSpace.srgb,
+        EasingColorSpace.linearRgb,
+        EasingColorSpace.oklab,
+        EasingColorSpace.oklch,
+      ]) {
+        for (final t in [-1.0, 0.0, 0.5, 1.0, 2.0]) {
+          final result = mixColors(
+            from,
+            to,
+            t,
+            space,
+            outputColorSpace: ColorSpace.extendedSRGB,
+          );
+          expectChannels(result, (-0.2, 0.3, 1.4), 2e-6);
+          expect(
+            result.a,
+            (0.25 + 0.5 * t).clamp(0.0, 1.0),
+            reason: 'Alpha must be bounded even when RGB is extended.',
+          );
+        }
+      }
+    });
+
+    test('alpha weighting preserves visible P3 color at low alpha', () {
+      for (final output in [ColorSpace.displayP3, ColorSpace.extendedSRGB]) {
+        for (final space in [
+          EasingColorSpace.srgb,
+          EasingColorSpace.linearRgb,
+          EasingColorSpace.oklab,
+        ]) {
+          final expected = mixColors(
+            p3Red,
+            p3Red,
+            0,
+            space,
+            outputColorSpace: output,
+          );
+          for (final t in [0.2, 0.999]) {
+            final actual = mixColors(
+              p3Red,
+              const Color(0x00000000),
+              t,
+              space,
+              outputColorSpace: output,
+            );
+            expectChannels(actual, (expected.r, expected.g, expected.b), 2e-6);
+            expect(
+              actual.a,
+              closeTo(1 - t, 1e-12),
+              reason:
+                  'Wide-gamut output must retain premultiplied-alpha mixing.',
+            );
+          }
+          final zero = mixColors(
+            p3Red.withValues(alpha: 0),
+            const Color(0x00000000),
+            0.5,
+            space,
+            outputColorSpace: output,
+          );
+          expect(
+            [zero.a, zero.r, zero.g, zero.b].every((v) => v.isFinite),
+            isTrue,
+            reason: 'The near-zero-alpha fallback must not divide by zero.',
+          );
+        }
+      }
+    });
+
+    test('HSL deliberately uses bounded sRGB working input', () {
+      for (final output in [ColorSpace.displayP3, ColorSpace.extendedSRGB]) {
+        final actual = mixColors(
+          p3Green,
+          const Color(0xFFFFFFFF),
+          0.5,
+          EasingColorSpace.hsl,
+          outputColorSpace: output,
+        );
+        final bounded = mixColors(
+          const Color(0xFF00FF00),
+          const Color(0xFFFFFFFF),
+          0.5,
+          EasingColorSpace.hsl,
+          outputColorSpace: output,
+        );
+        expectChannels(actual, (bounded.r, bounded.g, bounded.b), 1e-12);
+      }
+      expect(
+        mixColors(
+          p3Green,
+          p3Red,
+          0,
+          EasingColorSpace.hsl,
+          outputColorSpace: ColorSpace.displayP3,
+        ),
+        p3Green,
+        reason: 'Direct endpoints bypass the HSL working-gamut limitation.',
+      );
+    });
+
+    test('default and explicit sRGB retain legacy output', () {
+      for (final space in EasingColorSpace.values) {
+        for (final t in [0.0, 0.25, 0.5, 1.0]) {
+          expect(
+            mixColors(p3Red, const Color(0x800080FF), t, space),
+            mixColors(
+              p3Red,
+              const Color(0x800080FF),
+              t,
+              space,
+              outputColorSpace: ColorSpace.sRGB,
+            ),
+            reason: 'Opt-in output must not alter the default path.',
+          );
+        }
+      }
+      final bounded = decodeColor((
+        alpha: 1.2,
+        x: -0.3,
+        y: 0.4,
+        z: 1.5,
+      ), EasingColorSpace.srgb);
+      expectChannels(bounded, (0, 0.4, 1), 0);
+      expect(
+        bounded.a,
+        1,
+        reason: 'Default sRGB keeps its previous alpha clamp.',
+      );
     });
   });
 

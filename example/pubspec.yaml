@@ -9,8 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Clean URLs on the web (/docs rather than /#/docs).
+  flutter_web_plugins:
+    sdk: flutter
   easing_gradient:
     path: ..
+  device_preview: ^3.0.0
+  shiki_flutter: ^1.1.0
+  go_router: ^18.0.1
 
 dev_dependencies:
   flutter_test:
@@ -21,3 +27,33 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Photograph credits and licenses live in assets/images/CREDITS.md.
+  assets:
+    - assets/images/
+
+  shaders:
+    - shaders/alpha_fade.frag
+
+  # Geist and Geist Mono (SIL Open Font License, see the OFL files beside them).
+  # Bundled so the site renders in its own typeface instead of the platform
+  # default, which is what makes a Flutter web app look like an Android app.
+  fonts:
+    - family: Geist
+      fonts:
+        - asset: assets/fonts/Geist-400.ttf
+          weight: 400
+        - asset: assets/fonts/Geist-500.ttf
+          weight: 500
+        - asset: assets/fonts/Geist-600.ttf
+          weight: 600
+        - asset: assets/fonts/Geist-700.ttf
+          weight: 700
+    - family: Geist Mono
+      fonts:
+        - asset: assets/fonts/GeistMono-400.ttf
+          weight: 400
+        - asset: assets/fonts/GeistMono-500.ttf
+          weight: 500
+        - asset: assets/fonts/GeistMono-700.ttf
+          weight: 700

@@ -7,10 +7,11 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 ///
 /// A pair of endpoint colors can be connected through several different color
 /// paths. The selected path determines the hue, lightness, and chroma seen in
-/// the middle of the fade. All inputs are converted to sRGB before mixing, and
-/// every result, including an endpoint returned by [mixColors], is an sRGB
-/// [Color]. This preserves the endpoint's sRGB appearance, but does not preserve
-/// a wide-gamut input's original [Color.colorSpace] or out-of-sRGB gamut.
+/// the middle of the fade. By default inputs and output use bounded sRGB for
+/// compatibility. Set [mixColors]'s `outputColorSpace` to Display P3 or extended
+/// sRGB to retain wide-gamut input through the calculation. The mixing path and
+/// the output [Color.colorSpace] are independent choices. HSL always uses a
+/// bounded sRGB working space, even when the output is wide gamut.
 ///
 /// [mixColors] alpha-weights the rectangular components before interpolation.
 /// In the polar [oklch] and [hsl] spaces, the non-hue components are
@@ -218,10 +219,22 @@ double _cbrt(double value) {
 
 /// Decomposes [color] into the components of [space].
 ///
-/// The color is normalized to sRGB first, see [toSrgbColor].
+/// The default keeps the legacy bounded sRGB input conversion. Other outputs
+/// use extended sRGB working values, except HSL which needs bounded channels.
 @visibleForTesting
-ColorComponents encodeColor(Color color, EasingColorSpace space) {
-  final Color srgb = toSrgbColor(color);
+ColorComponents encodeColor(
+  Color color,
+  EasingColorSpace space, {
+  ColorSpace outputColorSpace = ColorSpace.sRGB,
+}) {
+  final Color srgb = outputColorSpace == ColorSpace.sRGB
+      ? toSrgbColor(color)
+      : _convertOutput(
+          color,
+          space == EasingColorSpace.hsl
+              ? ColorSpace.sRGB
+              : ColorSpace.extendedSRGB,
+        );
   final double r = srgb.r;
   final double g = srgb.g;
   final double b = srgb.b;
@@ -262,16 +275,18 @@ ColorComponents encodeColor(Color color, EasingColorSpace space) {
   }
 }
 
-/// Rebuilds an sRGB [Color] from components of [space].
+/// Rebuilds a [Color] in [outputColorSpace] from components of [space].
 ///
-/// Conversion finishes in floating point, then alpha and each sRGB channel are
-/// clipped independently to `[0, 1]`. Independent clipping is inexpensive and
-/// guarantees a valid Flutter [Color], but it is not perceptual gamut mapping:
-/// it can change hue, lightness, or chroma. Clipping each generated stop is also
-/// why sharp, overshooting, and highly chromatic paths can require more samples
-/// than a simple in-gamut fade.
+/// Conversion finishes before clipping: alpha is bounded to `[0, 1]`, and RGB
+/// is bounded only for sRGB and Display P3 output. Extended sRGB retains finite
+/// negative and greater-than-one channels. Independent channel clipping is not
+/// perceptual gamut mapping and can change hue, lightness, or chroma.
 @visibleForTesting
-Color decodeColor(ColorComponents components, EasingColorSpace space) {
+Color decodeColor(
+  ColorComponents components,
+  EasingColorSpace space, {
+  ColorSpace outputColorSpace = ColorSpace.sRGB,
+}) {
   final double x = components.x;
   final double y = components.y;
   final double z = components.z;
@@ -311,11 +326,59 @@ Color decodeColor(ColorComponents components, EasingColorSpace space) {
       (r, g, b) = hslToSrgb(x, y, z);
   }
 
+  return _convertOutput(
+    Color.from(
+      alpha: components.alpha,
+      red: r,
+      green: g,
+      blue: b,
+      colorSpace: ColorSpace.extendedSRGB,
+    ),
+    outputColorSpace,
+  );
+}
+
+// Convert through extended sRGB without clipping to its smaller gamut. Do not
+// use withValues(extendedSRGB -> displayP3): some Flutter SDKs' _ClampTransform
+// clamps the input without applying the primaries conversion in its child.
+Color _convertOutput(Color color, ColorSpace output) {
+  double r = color.r;
+  double g = color.g;
+  double b = color.b;
+  if (color.colorSpace != output &&
+      (color.colorSpace == ColorSpace.displayP3 ||
+          output == ColorSpace.displayP3)) {
+    final double lr = linearizeChannel(r);
+    final double lg = linearizeChannel(g);
+    final double lb = linearizeChannel(b);
+    // D65 primaries, via XYZ, from CSS Color 4 reference matrices:
+    // https://www.w3.org/TR/css-color-4/#color-conversion-code
+    if (output == ColorSpace.displayP3) {
+      r = delinearizeChannel(0.8224619687143623 * lr + 0.1775380312856377 * lg);
+      g = delinearizeChannel(0.0331941988509618 * lr + 0.9668058011490382 * lg);
+      b = delinearizeChannel(
+        0.0170826307211200 * lr +
+            0.0723974406639634 * lg +
+            0.9105199286149166 * lb,
+      );
+    } else {
+      r = delinearizeChannel(1.2249401762805596 * lr - 0.2249401762805599 * lg);
+      g = delinearizeChannel(
+        -0.0420569547096882 * lr + 1.0420569547096880 * lg,
+      );
+      b = delinearizeChannel(
+        -0.0196375545903344 * lr -
+            0.0786360455506319 * lg +
+            1.0982736001409663 * lb,
+      );
+    }
+  }
   return Color.from(
-    alpha: components.alpha.clamp(0.0, 1.0),
-    red: r.clamp(0.0, 1.0),
-    green: g.clamp(0.0, 1.0),
-    blue: b.clamp(0.0, 1.0),
+    alpha: color.a.clamp(0.0, 1.0),
+    red: output == ColorSpace.extendedSRGB ? r : r.clamp(0.0, 1.0),
+    green: output == ColorSpace.extendedSRGB ? g : g.clamp(0.0, 1.0),
+    blue: output == ColorSpace.extendedSRGB ? b : b.clamp(0.0, 1.0),
+    colorSpace: output,
   );
 }
 
@@ -349,19 +412,27 @@ double _lerpHue(double from, double to, double t) {
   return from + delta * t;
 }
 
-/// Blends [from] and [to] by fraction [t] through [space] and returns an sRGB
-/// [Color].
+/// Blends [from] and [to] by fraction [t] through [space] and returns a [Color]
+/// in [outputColorSpace], which defaults to sRGB for compatibility.
 ///
 /// The algorithm is:
 ///
-/// 1. Convert both inputs to sRGB and encode them in [space].
-/// 2. Multiply every non-hue component by its alpha.
+/// 1. With default output, convert both inputs to bounded sRGB. With Display P3
+///    or extended sRGB output, retain extended sRGB working values. HSL always
+///    uses bounded sRGB input, so its interior path can lose wide-gamut chroma.
+/// 2. Encode in [space] and multiply every non-hue component by its alpha.
 /// 3. Interpolate alpha and the premultiplied components by [t]. In
 ///    [EasingColorSpace.oklch] and [EasingColorSpace.hsl], interpolate hue
 ///    separately along the shorter angular path.
 /// 4. Divide the non-hue components by the interpolated alpha, except near zero
 ///    where division would be numerically unstable.
-/// 5. Convert to sRGB and independently clip alpha and channels to `[0, 1]`.
+/// 5. Decode and convert to [outputColorSpace], then clamp alpha to `[0, 1]`.
+///    sRGB and Display P3 clamp RGB to their own gamuts; extended sRGB does not.
+///
+/// Endpoints are converted directly to the selected output, without a trip
+/// through [space]. Matching-space finite endpoints retain their RGB values
+/// unless that output gamut requires clipping. This is numerical color data,
+/// not a guarantee that a renderer or display can show the selected gamut.
 ///
 /// This follows the CSS Color 4 premultiplication model for non-hue components,
 /// but it is not a complete implementation of CSS missing-component or gamut
@@ -369,22 +440,39 @@ double _lerpHue(double from, double to, double t) {
 ///
 /// [t] is deliberately not clamped. Elastic and back curves can supply values
 /// below zero or above one. Alpha and components are extrapolated first, and
-/// only the final sRGB result is clipped. Polar hue extrapolates along the
+/// only the final bounded output is clipped. Polar hue extrapolates along the
 /// already selected short arc. Clipping may flatten part of a visible
-/// overshoot, especially near the sRGB gamut boundary.
+/// overshoot, especially near the output gamut boundary.
 ///
 /// In rectangular spaces this prevents a transparent endpoint's hidden RGB
 /// from polluting the visible fade. For example, white fading to transparent
 /// black stays white while its alpha decreases. In polar spaces, a transparent
 /// chromatic endpoint's hidden hue can still influence the angular hue path.
-Color mixColors(Color from, Color to, double t, EasingColorSpace space) {
-  // Skip conversion through the chosen interpolation space at endpoints. Input
-  // normalization still returns sRGB, so a wide-gamut Color is not identical.
-  if (t == 0) return toSrgbColor(from);
-  if (t == 1) return toSrgbColor(to);
+Color mixColors(
+  Color from,
+  Color to,
+  double t,
+  EasingColorSpace space, {
+  ColorSpace outputColorSpace = ColorSpace.sRGB,
+}) {
+  // Preserve the historical default conversion, including its SDK behavior.
+  if (t == 0 || t == 1) {
+    final Color endpoint = t == 0 ? from : to;
+    return outputColorSpace == ColorSpace.sRGB
+        ? toSrgbColor(endpoint)
+        : _convertOutput(endpoint, outputColorSpace);
+  }
 
-  final ColorComponents a = encodeColor(from, space);
-  final ColorComponents b = encodeColor(to, space);
+  final ColorComponents a = encodeColor(
+    from,
+    space,
+    outputColorSpace: outputColorSpace,
+  );
+  final ColorComponents b = encodeColor(
+    to,
+    space,
+    outputColorSpace: outputColorSpace,
+  );
 
   final int hueIndex = _hueComponentIndex(space);
   final double alpha = _lerp(a.alpha, b.alpha, t);
@@ -399,20 +487,23 @@ Color mixColors(Color from, Color to, double t, EasingColorSpace space) {
       // Dividing by nearly zero would amplify floating-point error, especially
       // when an overshooting curve crosses alpha zero. Straight interpolation
       // provides deterministic hidden RGB; at zero alpha it is not visible.
-      return decodeColor((
-        alpha: alpha,
-        x: _lerp(a.x, b.x, t),
-        y: _lerp(a.y, b.y, t),
-        z: _lerp(a.z, b.z, t),
-      ), space);
+      return decodeColor(
+        (
+          alpha: alpha,
+          x: _lerp(a.x, b.x, t),
+          y: _lerp(a.y, b.y, t),
+          z: _lerp(a.z, b.z, t),
+        ),
+        space,
+        outputColorSpace: outputColorSpace,
+      );
     }
 
-    return decodeColor((
-      alpha: alpha,
-      x: x / alpha,
-      y: y / alpha,
-      z: z / alpha,
-    ), space);
+    return decodeColor(
+      (alpha: alpha, x: x / alpha, y: y / alpha, z: z / alpha),
+      space,
+      outputColorSpace: outputColorSpace,
+    );
   }
 
   // Polar space: hue interpolates around the wheel and is never premultiplied,
@@ -452,5 +543,6 @@ Color mixColors(Color from, Color to, double t, EasingColorSpace space) {
         ? (alpha: alpha, x: hue, y: first, z: second)
         : (alpha: alpha, x: first, y: second, z: hue),
     space,
+    outputColorSpace: outputColorSpace,
   );
 }

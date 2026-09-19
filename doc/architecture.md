@@ -12,14 +12,23 @@ This guide explains how `easing_gradient` works, where responsibilities live, an
 | `lib/src/steps_curve.dart` | CSS-style staircase easing and exact hard-band values. |
 | `lib/src/easing_*_gradient.dart` | Drop-in Flutter gradient subclasses that sample once, then delegate rendering to native Flutter shaders. |
 | `test/` | Mathematical, API-contract, renderer-model, and approximation regression tests. |
-| `example/lib/main.dart` | Interactive Playground and Accuracy Lab. |
+| `example/lib/main.dart` | Root app: theme controller, destination state, and shell. |
+| `example/lib/home_page.dart` | Landing page: hero, one comparison, feature blocks, closing call to action. |
+| `example/lib/docs_page.dart`, `example/lib/src/docs/` | Documentation page, section metadata, and prose components. |
+| `example/lib/src/theme/` | Design tokens, the Material theme built from them, and the light/dark controller. |
+| `example/lib/src/widgets/` | Site chrome: nav shell, content container and sections, footer, and the themed control set. |
+| `example/lib/examples_page.dart` | Recreated website gradients, palette boards, and the pluto collection. |
+| `example/lib/playground_page.dart` | Interactive geometry, curve, color-space, and density matrix. |
+| `example/lib/accuracy_lab_page.dart` | Physical-column CPU models and sampling comparisons. |
+| `example/lib/alpha_fade.dart`, `example/shaders/alpha_fade.frag` | Example-only analytic alpha mask and stationary alpha-noise experiment. |
+| `example/lib/src/widgets/iphone_frame.dart` | iPhone 17 Pro body from `device_preview` presets, scaled around a widget subtree. |
 | `example/lib/comparison_page.dart` | Fixed teaching catalog that compares curves, spaces, geometry, stops, and density. |
 | `example/lib/edge_fade_page.dart` | `ShaderMask` alpha-mask recipe and its live controls. |
 | `example/lib/benchmark/` | Profile-mode construction and frame benchmark workload. |
 | `example/integration_test/` | Device benchmark orchestration. |
 | `tool/generate_readme_images.dart` | Regenerates the README figures in `doc/images/`. |
 | `doc/images/` | Generated README figures. Edit the generator, never the PNGs. |
-| `docs/benchmarks/` | Recorded methodology, results, and interpretation limits. |
+| `doc/benchmarks/` | Recorded methodology, results, and interpretation limits. |
 
 ## End-to-end data flow
 
@@ -79,7 +88,7 @@ This guard can increase output count by one per transparent transition boundary.
 
 ## Color interpolation
 
-All colors enter and leave the interpolation engine as sRGB. Display P3 and other wide-gamut inputs are converted first, which can discard colors outside sRGB.
+The default output remains sRGB. The optional `outputColorSpace` selects Display P3 or extended-sRGB output independently of `EasingColorSpace`. Opt-in non-HSL interpolation uses extended-sRGB working coordinates, retaining out-of-sRGB values through color conversion. HSL explicitly retains bounded sRGB working coordinates. Correct primaries conversion is required before tagging output; tags alone do not convert colors.
 
 ### Rectangular spaces
 
@@ -93,7 +102,7 @@ A fully transparent chromatic endpoint can still influence hue in a polar space.
 
 ### Gamut policy
 
-After conversion back to sRGB, alpha and every channel are independently clipped to `[0, 1]`. This is fast and deterministic, but it is not perceptual gamut mapping. Clipping can change chroma or hue and can flatten overshooting curves near gamut boundaries.
+Alpha is clipped to `[0, 1]`. Bounded sRGB and P3 outputs clip RGB only after conversion into their output primaries; extended-sRGB output retains negative and greater-than-one RGB. Bounded clipping is not perceptual gamut mapping. Renderer adapters, surfaces, and displays can still discard precision or gamut. In the inspected Flutter 3.47.4 SDK, native Skia and web gradient adapters pack stops into 8-bit ARGB; native Float32 input alone does not establish end-to-end precision.
 
 ## StepsCurve
 
@@ -115,7 +124,7 @@ Inherited `colors` and `stops` are shader-ready dense lists. `sourceColors` and 
 
 Value equality includes source configuration and geometry, not only rendered dense lists. Two configurations that paint the same flat color can still compare unequal if their public easing settings differ.
 
-Flutter's inherited `scale`, `withOpacity`, `fromColor`, and interpolation methods return base gradient classes. The generated stops, and therefore the appearance, remain. Package-specific source metadata and runtime type do not.
+Flutter's inherited `scale`, `withOpacity`, `fromColor`, and interpolation methods return base gradient classes. The generated stops, and therefore the appearance, remain. Package-specific source metadata and runtime type do not. Extended-sRGB output is an exception to unrestricted inherited-operation compatibility: Flutter 3.47.4 `Color.lerp` asserts on these colors. Rebuild from source configuration instead of relying on inherited scale/lerp for extended output.
 
 ## Example application
 
@@ -133,9 +142,19 @@ The custom 700-pixel breakpoint is based on room for two legible preview cards, 
 
 ### Edge fade
 
-`edge_fade_page.dart` demonstrates the gradient as an alpha mask rather than as paint. `EdgeFade` builds the mask in `build` and passes `createShader` to `ShaderMask`, because `ShaderMask` requests a shader on every paint and constructing the gradient inside the callback would resample the curve on every frame of a scroll.
+`edge_fade_page.dart` demonstrates the gradient as an alpha mask rather than as paint. Its two content examples, a compact list and a paragraph reader, render inside the iPhone 17 Pro preset frame. `device_preview` 3 paints its device body outside the render object's own bounds and expects that object to be exactly the simulated screen, so `IPhone17ProFrame` reserves the full body rectangle, scales it, and offsets the screen back to the frame origin. `EdgeFade` builds the mask in `build` and passes `createShader` to `ShaderMask`, because `ShaderMask` requests a shader on every paint and constructing the gradient inside the callback would resample the curve on every frame of a scroll.
 
 The preview keeps a real scrollable inside the mask so content is seen dissolving as it passes under the edge. The extent is clamped to a half so the two fades cannot cross and ask for descending stops.
+
+### Site template
+
+The example is presented as a website, not a phone app. `src/theme/tokens.dart` holds an `AppColors` theme extension plus radius, layout, and font constants; `src/theme/app_theme.dart` turns those into a `ThemeData` that also flattens Material's stock slider, switch, dropdown, and segmented-button styling. `src/widgets/app_shell.dart` owns the sticky nav, the destination enum, the compact menu sheet, and the footer. `src/widgets/section.dart` provides the centered content column and heading scale, and `src/widgets/controls.dart` the labelled control set and the preview-beside-controls layout.
+
+Destination links carry stable `nav-<slug>` keys because several destinations share a name with the heading on the page they open. The nav collapses into a menu below `AppLayout.compactBreakpoint`, which is independent of the comparison catalog's own 700-pixel card breakpoint.
+
+### Examples
+
+`examples_page.dart` recreates gradients from reference screenshots and mirrors the full pluto background collection. It is a wide visual surface: a change in sampling or color math shows up across roughly 200 fades at once.
 
 ### Playground
 
@@ -143,13 +162,13 @@ Playground applies one set of interpolation controls to linear, radial, and swee
 
 ### Accuracy Lab
 
-Accuracy Lab compares three outputs that must share endpoints, curve, color space, and sample count:
+Accuracy Lab compares production uniform, dense uniform, and experimental placement through native shaders. Separate CPU reference and residual strips sample physical-column centers using nonoverlapping, non-antialiased rectangles. Reference colors are composited onto an explicit opaque background before painting.
 
-1. production generated-stop native gradient;
-2. direct CPU curve and color evaluation per layout column;
-3. amplified absolute premultiplied-channel difference.
+The model metric includes alpha and source-over RGB differences on black/white backgrounds. The preview residual uses the selected background. Neither reads the framebuffer, and both reference and sampled colors share `mixColors`. They cannot validate color math independently or establish freedom from display banding. The reference is still subject to backend color encoding.
 
-The CPU strip is exact only at displayed column resolution. The difference strip is not a perceptual color-distance metric.
+`benchmark/sampling.dart` keeps bounded Bézier-parameter and adaptive sampling example-local. Cubic placement evaluates Flutter's actual curve at nonuniform x positions; adaptive placement probes multiple positions and has a fixed stop budget, not a universal error guarantee. Steps remain on the exact production band path.
+
+The Edge fade shader experiment targets alpha, because `BlendMode.dstIn` ignores RGB. It compares identical analytic one-layer masks with zero noise versus adjustable stationary alpha noise. This is not the same composition workload as the original two-native-mask recipe. Endpoints are pinned and noise is clamped; visual quality and any bias near endpoints still require on-display checking.
 
 ## Performance benchmark
 
@@ -163,7 +182,7 @@ Dense native versus easing isolates wrapper overhead. Compact native versus easi
 
 One cached gradient object creates shaders for 64 animated tile rectangles every frame. The benchmark does not reconstruct 64 gradients every frame.
 
-See `docs/benchmarks/gradient-performance.md` for the runnable command, JSON schema, recorded results, and limitations.
+See `doc/benchmarks/gradient-performance.md` for the runnable command, JSON schema, recorded results, and limitations.
 
 ## README figures
 

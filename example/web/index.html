@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,21 +18,128 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Interactive easing gradient comparisons, playground and accuracy lab for Flutter.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>easing_gradient: silky smooth Flutter gradients</title>
+  <meta name="description" content="Drop-in linear, radial and sweep gradients for Flutter that ease between colors with any Curve, in OKLab, OKLCH, linear RGB, sRGB or HSL.">
+  <meta name="author" content="Birju Vachhani">
+  <meta name="keywords" content="Flutter gradient, easing gradient, OKLab, OKLCH, LinearGradient, color interpolation, Curves, scrim, edge fade">
+  <meta name="theme-color" content="#0A0A0A">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="Easing Gradient Lab">
+  <meta name="apple-mobile-web-app-title" content="easing_gradient">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
-  <!-- Favicon -->
+  <!-- Favicon: the mark as SVG, with a PNG fallback for older browsers. -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Easing Gradient Lab</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    /* Dark background before Flutter boots, to avoid a white flash. */
+    html, body { margin: 0; background-color: #0A0A0A; }
+
+    /* Branded loading indicator shown until Flutter paints its first frame.
+       Pure HTML/CSS: the site's Geist fonts are Flutter-bundled and not
+       available here, so the loader uses no text, just an eased gradient mark
+       and a thin indeterminate bar. */
+    #loading {
+      position: fixed; inset: 0; z-index: 2147483647;
+      display: flex; align-items: center; justify-content: center;
+      background-color: #0A0A0A;
+      opacity: 1; transition: opacity 320ms ease;
+    }
+    #loading.loaded { opacity: 0; }
+    .loader-inner { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .loader-logo {
+      width: 72px; height: 72px;
+      animation: eg-breathe 1.8s ease-in-out infinite;
+    }
+    .loader-bar {
+      width: 132px; height: 3px; border-radius: 999px; overflow: hidden;
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+    .loader-bar-fill {
+      display: block; height: 100%; width: 40%; border-radius: 999px;
+      background: linear-gradient(90deg, #F7C27A, #EF6E72, #7D53C4);
+      animation: eg-slide 1.15s ease-in-out infinite;
+    }
+    @keyframes eg-slide { 0% { transform: translateX(-120%); } 100% { transform: translateX(360%); } }
+    @keyframes eg-breathe { 0%, 100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+    @media (prefers-reduced-motion: reduce) {
+      #loading { transition: none; }
+      .loader-logo { animation: none; }
+      .loader-bar-fill { animation: none; width: 100%; }
+    }
+  </style>
 </head>
 <body>
+  <!-- Crawlable fallback for bots and AI assistants that do not run the Flutter
+       app: real text plus links. Only shown when JavaScript is disabled, so it
+       never reaches real users and cannot be seen as hidden content. -->
+  <noscript>
+    <main>
+      <h1>easing_gradient</h1>
+      <p>Drop-in linear, radial and sweep gradients for Flutter that ease
+         between colors with any Curve, interpolating in OKLab, OKLCH, linear
+         RGB, sRGB or HSL, then handing ordinary stops back to Flutter's own
+         shader.</p>
+      <p>This site is a Flutter web application rendered to a canvas.</p>
+      <ul>
+        <li><a href="https://pub.dev/packages/easing_gradient">Package on pub.dev</a></li>
+        <li><a href="https://github.com/BirjuVachhani/easing_gradient">Source on GitHub</a></li>
+      </ul>
+    </main>
+  </noscript>
+
+  <!-- Branded loader: the mark (inlined from favicon.svg so it needs no
+       network fetch) above a thin indeterminate bar. The inline script below
+       removes it once Flutter paints. -->
+  <div id="loading" role="presentation" aria-hidden="true">
+    <div class="loader-inner">
+      <svg class="loader-logo" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="eg-fill" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#F7C27A"/>
+            <stop offset="0.36" stop-color="#EF6E72"/>
+            <stop offset="0.7" stop-color="#7D53C4"/>
+            <stop offset="1" stop-color="#16204A"/>
+          </linearGradient>
+        </defs>
+        <path d="M246.0 128.0C246.0 139.8 246.3 151.6 245.9 163.4C245.6 175.2 246.7 187.4 244.1 198.7C241.6 209.9 238.3 223.2 230.7 230.7C223.2 238.3 209.9 241.6 198.7 244.1C187.4 246.7 175.2 245.6 163.4 245.9C151.6 246.3 139.8 246.0 128.0 246.0C116.2 246.0 104.4 246.3 92.6 245.9C80.8 245.6 68.6 246.7 57.3 244.1C46.1 241.6 32.8 238.3 25.3 230.7C17.7 223.2 14.4 209.9 11.9 198.7C9.3 187.4 10.4 175.2 10.1 163.4C9.7 151.6 10.0 139.8 10.0 128.0C10.0 116.2 9.7 104.4 10.1 92.6C10.4 80.8 9.3 68.6 11.9 57.3C14.4 46.1 17.7 32.8 25.3 25.3C32.8 17.7 46.1 14.4 57.3 11.9C68.6 9.3 80.8 10.4 92.6 10.1C104.4 9.7 116.2 10.0 128.0 10.0C139.8 10.0 151.6 9.7 163.4 10.1C175.2 10.4 187.4 9.3 198.7 11.9C209.9 14.4 223.2 17.7 230.7 25.3C238.3 32.8 241.6 46.1 244.1 57.3C246.7 68.6 245.6 80.8 245.9 92.6C246.3 104.4 246.0 116.2 246.0 128.0Z" fill="url(#eg-fill)"/>
+        <path d="M70 186C118.7 186 137.3 70 186 70" fill="none" stroke="#FFFFFF" stroke-width="20" stroke-linecap="round" stroke-opacity="0.95"/>
+      </svg>
+      <div class="loader-bar"><span class="loader-bar-fill"></span></div>
+    </div>
+  </div>
+  <script>
+    // Remove the branded loader once Flutter renders. Arms a MutationObserver
+    // before the engine boots, waits two frames after the flutter view is
+    // injected (so the first paint lands before we fade), then fades + removes.
+    (function () {
+      var loader = document.getElementById('loading');
+      if (!loader) return;
+      var done = false, obs;
+      function hide() {
+        if (done) return;
+        done = true;
+        if (obs) obs.disconnect();
+        loader.classList.add('loaded');
+        setTimeout(function () { loader.remove(); }, 400);
+      }
+      obs = new MutationObserver(function () {
+        if (document.querySelector('flutter-view, flt-glass-pane, flt-scene-host')) {
+          requestAnimationFrame(function () { requestAnimationFrame(hide); });
+        }
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+      setTimeout(hide, 15000); // fallback: never leave the loader stuck
+    })();
+  </script>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

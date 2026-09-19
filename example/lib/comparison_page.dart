@@ -3,38 +3,47 @@ import 'dart:math' as math;
 import 'package:easing_gradient/easing_gradient.dart';
 import 'package:flutter/material.dart';
 
+import 'examples_page.dart' show webGradientExamples;
+import 'src/theme/tokens.dart';
+import 'src/widgets/app_shell.dart';
+import 'src/widgets/scrim_card.dart';
+import 'src/widgets/section.dart';
+
 /// A browsable catalog comparing native and eased gradient behavior.
 class ComparisonPage extends StatelessWidget {
   const ComparisonPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200),
-        child: ListView(
-          key: const PageStorageKey('comparison-catalog-scroll'),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
-          children: [
-            Text(
-              'Gradient comparison gallery',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Eighteen fixed examples covering curves, color spaces, '
-              'transparency, stops, geometry, hard bands and sample density.',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 30),
-            for (var index = 0; index < _catalog.length; index++) ...[
-              _ComparisonSectionView(section: _catalog[index]),
-              if (index != _catalog.length - 1) const SizedBox(height: 42),
-            ],
-          ],
+    final compact = context.isCompact;
+    // A ListView (not a scrolling Column) so the 18 comparison chapters below
+    // the fold stay lazy; the catalog builds a lot of live gradients.
+    return SelectionArea(
+      child: ListView(
+        key: const PageStorageKey('comparison-catalog-scroll'),
+        padding: EdgeInsets.only(
+          top: AppLayout.navHeight + (compact ? 40 : 64),
         ),
+        children: [
+          const ContentContainer(
+            child: PageHeading(
+              title: 'Gradient comparison gallery',
+              subtitle:
+                  'Eighteen fixed examples covering curves, color spaces, '
+                  'transparency, stops, geometry, hard bands and sample '
+                  'density. Each pair changes one variable at a time.',
+            ),
+          ),
+          const SizedBox(height: 44),
+          for (var index = 0; index < _catalog.length; index++) ...[
+            ContentContainer(
+              child: _ComparisonSectionView(section: _catalog[index]),
+            ),
+            if (index != _catalog.length - 1) const SizedBox(height: 56),
+          ],
+          const SizedBox(height: 72),
+          const SiteFooter(),
+        ],
       ),
     );
   }
@@ -105,6 +114,10 @@ class _GradientSample {
 ///
 /// Keep the six section IDs and representative final case stable because widget
 /// tests use them to prove that the lazy list remains complete and scrollable.
+final michelberger = webGradientExamples[0].colors;
+final betterHalf = webGradientExamples[1].colors;
+final gucciBeauty = webGradientExamples[2].colors;
+
 final List<_ComparisonSection> _catalog = [
   _ComparisonSection(
     id: 'basics',
@@ -112,9 +125,9 @@ final List<_ComparisonSection> _catalog = [
     description: 'The colors can stay identical while the curve moves visual weight to a different part of the fade.',
     cases: [
       _GradientComparison(
-        id: 'classic-scrim',
-        title: 'Classic text scrim',
-        description: 'The original use case: remove the hard seam where a dark overlay begins.',
+        id: 'photo-scrim',
+        title: 'Caption scrim on a photo card',
+        description: 'The original use case: keep small type readable without drawing a band across the artwork.',
         mode: _PreviewMode.scrim,
         left: const _GradientSample(
           label: 'Flutter',
@@ -122,7 +135,7 @@ final List<_ComparisonSection> _catalog = [
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black],
+            colors: [Colors.transparent, Color(0xF2000000)],
           ),
         ),
         right: _GradientSample(
@@ -131,7 +144,7 @@ final List<_ComparisonSection> _catalog = [
           gradient: EasingLinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: const [Colors.transparent, Colors.black],
+            colors: const [Colors.transparent, Color(0xF2000000)],
           ),
         ),
       ),
@@ -144,7 +157,7 @@ final List<_ComparisonSection> _catalog = [
           label: 'Linear',
           detail: 'Curves.linear · sRGB',
           gradient: EasingLinearGradient(
-            colors: const [Color(0xFF111827), Color(0xFF60A5FA)],
+            colors: betterHalf,
             curve: Curves.linear,
             colorSpace: EasingColorSpace.srgb,
           ),
@@ -153,7 +166,7 @@ final List<_ComparisonSection> _catalog = [
           label: 'Ease in/out',
           detail: 'Curves.easeInOut · sRGB',
           gradient: EasingLinearGradient(
-            colors: const [Color(0xFF111827), Color(0xFF60A5FA)],
+            colors: betterHalf,
             colorSpace: EasingColorSpace.srgb,
           ),
         ),
@@ -167,7 +180,7 @@ final List<_ComparisonSection> _catalog = [
           label: 'Ease in',
           detail: 'Curves.easeInCubic',
           gradient: EasingLinearGradient(
-            colors: const [Color(0xFFEC4899), Color(0xFF312E81)],
+            colors: gucciBeauty,
             curve: Curves.easeInCubic,
           ),
         ),
@@ -175,7 +188,7 @@ final List<_ComparisonSection> _catalog = [
           label: 'Ease out',
           detail: 'Curves.easeOutCubic',
           gradient: EasingLinearGradient(
-            colors: const [Color(0xFFEC4899), Color(0xFF312E81)],
+            colors: gucciBeauty,
             curve: Curves.easeOutCubic,
           ),
         ),
@@ -288,63 +301,33 @@ final List<_ComparisonSection> _catalog = [
         title: 'Multi-stop palette',
         description: 'Every neighboring pair is sampled independently and shares its boundary exactly once.',
         mode: _PreviewMode.swatch,
-        left: const _GradientSample(
+        left: _GradientSample(
           label: 'Native',
-          detail: 'Four compact stops',
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF7C3AED),
-              Color(0xFFEC4899),
-              Color(0xFFF59E0B),
-              Color(0xFF10B981),
-            ],
-          ),
+          detail: 'Three compact stops',
+          gradient: LinearGradient(colors: michelberger),
         ),
         right: _GradientSample(
           label: 'Eased',
-          detail: 'Three eased transitions',
-          gradient: EasingLinearGradient(
-            colors: const [
-              Color(0xFF7C3AED),
-              Color(0xFFEC4899),
-              Color(0xFFF59E0B),
-              Color(0xFF10B981),
-            ],
-          ),
+          detail: 'Two eased transitions',
+          gradient: EasingLinearGradient(colors: michelberger),
         ),
       ),
       _GradientComparison(
         id: 'transition-curves',
         title: 'A curve per transition',
-        description: 'Overrides shape selected segments while null falls back to the global curve.',
+        description: 'A different curve can shape each neighboring pair in the Michelberger palette.',
         mode: _PreviewMode.swatch,
         left: _GradientSample(
           label: 'One curve',
           detail: 'easeInOut everywhere',
-          gradient: EasingLinearGradient(
-            colors: const [
-              Color(0xFF0F172A),
-              Color(0xFF38BDF8),
-              Color(0xFFFDE047),
-              Color(0xFFEF4444),
-            ],
-          ),
+          gradient: EasingLinearGradient(colors: michelberger),
         ),
         right: _GradientSample(
           label: 'Per transition',
-          detail: 'easeOut · fallback · easeIn',
+          detail: 'easeOut · easeIn',
           gradient: EasingLinearGradient(
-            colors: const [
-              Color(0xFF0F172A),
-              Color(0xFF38BDF8),
-              Color(0xFFFDE047),
-              Color(0xFFEF4444),
-            ],
-            transitionCurves: const [
-              Curves.easeOutCubic,
-              null,
-              Curves.easeInCubic,
-            ],
+            colors: michelberger,
+            transitionCurves: const [Curves.easeOutCubic, Curves.easeInCubic],
           ),
         ),
       ),
@@ -356,23 +339,13 @@ final List<_ComparisonSection> _catalog = [
         left: _GradientSample(
           label: 'Even',
           detail: 'Implied source stops',
-          gradient: EasingLinearGradient(
-            colors: const [
-              Color(0xFF172554),
-              Color(0xFF22D3EE),
-              Color(0xFFF8FAFC),
-            ],
-          ),
+          gradient: EasingLinearGradient(colors: gucciBeauty),
         ),
         right: _GradientSample(
           label: 'Clustered',
           detail: 'stops: 0.0 · 0.2 · 1.0',
           gradient: EasingLinearGradient(
-            colors: const [
-              Color(0xFF172554),
-              Color(0xFF22D3EE),
-              Color(0xFFF8FAFC),
-            ],
+            colors: gucciBeauty,
             stops: const [0, 0.2, 1],
           ),
         ),
@@ -638,9 +611,7 @@ class _ComparisonSectionView extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             section.description,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 18),
           for (var index = 0; index < section.cases.length; index++) ...[
@@ -675,9 +646,7 @@ class _ComparisonCaseView extends StatelessWidget {
             const SizedBox(height: 5),
             Text(
               comparison.description,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 14),
             _ResponsiveGradientPair(comparison: comparison),
@@ -756,7 +725,7 @@ class _GradientPreviewCard extends StatelessWidget {
           AspectRatio(
             aspectRatio: _aspectRatio,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppRadii.lg),
               child: _PreviewSurface(sample: sample, mode: mode),
             ),
           ),
@@ -767,12 +736,7 @@ class _GradientPreviewCard extends StatelessWidget {
                 ?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 2),
-          Text(
-            sample.detail,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
+          Text(sample.detail, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );
@@ -787,43 +751,7 @@ class _PreviewSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (mode) {
-      _PreviewMode.scrim => Stack(
-        fit: StackFit.expand,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment(-0.75, -0.8),
-                radius: 1.45,
-                colors: [
-                  Color(0xFFFFB36B),
-                  Color(0xFF6D5EF7),
-                  Color(0xFF14213D),
-                ],
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: FractionallySizedBox(
-              widthFactor: 1,
-              heightFactor: 0.78,
-              child: DecoratedBox(
-                decoration: BoxDecoration(gradient: sample.gradient),
-              ),
-            ),
-          ),
-          const Positioned(
-            left: 16,
-            right: 16,
-            bottom: 14,
-            child: Text(
-              'Readable text without a visible seam',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
+      _PreviewMode.scrim => ScrimCard(scrim: sample.gradient, compact: true),
       _PreviewMode.transparency => Stack(
         fit: StackFit.expand,
         children: [

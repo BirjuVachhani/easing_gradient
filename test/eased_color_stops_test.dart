@@ -1,3 +1,5 @@
+import 'dart:ui' show ColorSpace;
+
 import 'package:easing_gradient/easing_gradient.dart';
 import 'package:flutter/animation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -152,6 +154,58 @@ void main() {
         ),
         throwsAssertionError,
       );
+    });
+
+    // Conversion accuracy belongs to color_space_test.dart. These cases cover
+    // what the sampler owns: which stops carry the requested encoding.
+    group('outputColorSpace', () {
+      const p3Red = Color.from(
+        alpha: 1,
+        red: 1,
+        green: 0,
+        blue: 0,
+        colorSpace: ColorSpace.displayP3,
+      );
+
+      test('defaults to sRGB so existing callers see no change', () {
+        final result = easeColorStops(
+          colors: const [p3Red, Color(0xFF00FF00)],
+          samplesPerTransition: 3,
+        );
+        expect(result.colors.map((color) => color.colorSpace).toSet(), {
+          ColorSpace.sRGB,
+        });
+      });
+
+      test('tags interior samples and transparent guards alike', () {
+        final result = easeColorStops(
+          colors: const [Color(0xFFFFFFFF), Color(0x00000000)],
+          samplesPerTransition: 3,
+          outputColorSpace: ColorSpace.displayP3,
+        );
+        // A transparent endpoint adds a zero-width limiting-color stop. It is
+        // read by the same shader as every other stop, so it has to share the
+        // encoding rather than fall back to sRGB.
+        expect(result.colors.map((color) => color.colorSpace).toSet(), {
+          ColorSpace.displayP3,
+        }, reason: 'A single shader cannot read stops from two encodings.');
+      });
+
+      test('converts sRGB input rather than relabelling its channels', () {
+        const srgbRed = Color(0xFFFF0000);
+        final result = easeColorStops(
+          colors: const [srgbRed, Color(0xFF0000FF)],
+          samplesPerTransition: 3,
+          outputColorSpace: ColorSpace.displayP3,
+        );
+        final first = result.colors.first;
+        expect(first.colorSpace, ColorSpace.displayP3);
+        // sRGB red is inside P3, so it lands short of the P3 primary. Equal
+        // channel numbers would mean the values were retagged, not converted.
+        expect(first.r, lessThan(1));
+        expect(first.r, greaterThan(0.9));
+        expect(first.g, greaterThan(0));
+      });
     });
   });
 }

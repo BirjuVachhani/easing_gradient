@@ -1,0 +1,5 @@
+sites:
+  demo:
+    label: Website
+    build: cd example && flutter build web --release
+    output: example/build/web

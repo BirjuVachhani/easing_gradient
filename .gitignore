@@ -85,3 +85,8 @@ key.properties
 
 # Local migration scratch directories
 migrate_working_dir/
+
+# Local reference recordings kept beside the package. The published archive
+# excludes them through .pubignore, which pub reads instead of this file.
+*.mp4
+*.mov

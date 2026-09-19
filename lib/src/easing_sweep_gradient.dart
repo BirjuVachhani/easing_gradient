@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ColorSpace;
 
 import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
@@ -50,6 +51,7 @@ class EasingSweepGradient extends SweepGradient {
     Curve curve = Curves.easeInOut,
     List<Curve?>? transitionCurves,
     EasingColorSpace colorSpace = EasingColorSpace.oklab,
+    ColorSpace outputColorSpace = ColorSpace.sRGB,
     int samplesPerTransition = defaultSamplesPerTransition,
     TileMode tileMode = TileMode.clamp,
     GradientTransform? transform,
@@ -60,6 +62,7 @@ class EasingSweepGradient extends SweepGradient {
       curve: curve,
       transitionCurves: transitionCurves,
       colorSpace: colorSpace,
+      outputColorSpace: outputColorSpace,
       samplesPerTransition: samplesPerTransition,
     );
     return EasingSweepGradient._(
@@ -75,6 +78,7 @@ class EasingSweepGradient extends SweepGradient {
           ? null
           : List<Curve?>.unmodifiable(transitionCurves),
       colorSpace: colorSpace,
+      outputColorSpace: outputColorSpace,
       samplesPerTransition: samplesPerTransition,
       tileMode: tileMode,
       transform: transform,
@@ -92,6 +96,7 @@ class EasingSweepGradient extends SweepGradient {
     required this.curve,
     required this.transitionCurves,
     required this.colorSpace,
+    required this.outputColorSpace,
     required this.samplesPerTransition,
     required super.tileMode,
     required super.transform,
@@ -111,6 +116,13 @@ class EasingSweepGradient extends SweepGradient {
 
   /// The color space used to calculate intermediate colors.
   final EasingColorSpace colorSpace;
+
+  /// Encoding and gamut of generated colors, independent of [colorSpace].
+  ///
+  /// See [mixColors] for clipping and HSL behavior. Extended sRGB is supported
+  /// for shader data, but inherited interpolation uses Flutter's [Color.lerp],
+  /// which rejects extended sRGB in debug builds and clamps RGB in release.
+  final ColorSpace outputColorSpace;
 
   /// Requested interior samples per positive-width, non-stepped transition.
   ///
@@ -132,6 +144,7 @@ class EasingSweepGradient extends SweepGradient {
           other.curve == curve &&
           listEquals(other.transitionCurves, transitionCurves) &&
           other.colorSpace == colorSpace &&
+          other.outputColorSpace == outputColorSpace &&
           other.samplesPerTransition == samplesPerTransition;
 
   @override
@@ -146,6 +159,7 @@ class EasingSweepGradient extends SweepGradient {
     curve,
     transitionCurves == null ? null : Object.hashAll(transitionCurves!),
     colorSpace,
+    outputColorSpace,
     samplesPerTransition,
   );
 
@@ -155,6 +169,7 @@ class EasingSweepGradient extends SweepGradient {
       'endAngle: $endAngle, sourceColors: $sourceColors, '
       'sourceStops: $sourceStops, curve: $curve, '
       'transitionCurves: $transitionCurves, colorSpace: ${colorSpace.name}, '
+      'outputColorSpace: ${outputColorSpace.name}, '
       'samplesPerTransition: $samplesPerTransition, tileMode: $tileMode, '
       'transform: $transform, generatedStops: ${colors.length})';
 }

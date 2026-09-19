@@ -1,3 +1,5 @@
+import 'dart:ui' show ColorSpace;
+
 import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
@@ -48,6 +50,7 @@ class EasingRadialGradient extends RadialGradient {
     Curve curve = Curves.easeInOut,
     List<Curve?>? transitionCurves,
     EasingColorSpace colorSpace = EasingColorSpace.oklab,
+    ColorSpace outputColorSpace = ColorSpace.sRGB,
     int samplesPerTransition = defaultSamplesPerTransition,
     TileMode tileMode = TileMode.clamp,
     AlignmentGeometry? focal,
@@ -60,6 +63,7 @@ class EasingRadialGradient extends RadialGradient {
       curve: curve,
       transitionCurves: transitionCurves,
       colorSpace: colorSpace,
+      outputColorSpace: outputColorSpace,
       samplesPerTransition: samplesPerTransition,
     );
     return EasingRadialGradient._(
@@ -74,6 +78,7 @@ class EasingRadialGradient extends RadialGradient {
           ? null
           : List<Curve?>.unmodifiable(transitionCurves),
       colorSpace: colorSpace,
+      outputColorSpace: outputColorSpace,
       samplesPerTransition: samplesPerTransition,
       tileMode: tileMode,
       focal: focal,
@@ -92,6 +97,7 @@ class EasingRadialGradient extends RadialGradient {
     required this.curve,
     required this.transitionCurves,
     required this.colorSpace,
+    required this.outputColorSpace,
     required this.samplesPerTransition,
     required super.tileMode,
     required super.focal,
@@ -114,6 +120,13 @@ class EasingRadialGradient extends RadialGradient {
   /// The color space used to calculate intermediate colors.
   final EasingColorSpace colorSpace;
 
+  /// Encoding and gamut of generated colors, independent of [colorSpace].
+  ///
+  /// See [mixColors] for clipping and HSL behavior. Extended sRGB is supported
+  /// for shader data, but inherited interpolation uses Flutter's [Color.lerp],
+  /// which rejects extended sRGB in debug builds and clamps RGB in release.
+  final ColorSpace outputColorSpace;
+
   /// Requested interior samples per positive-width, non-stepped transition.
   ///
   /// Transparent endpoint guards and deduplication can change the final number
@@ -135,6 +148,7 @@ class EasingRadialGradient extends RadialGradient {
           other.curve == curve &&
           listEquals(other.transitionCurves, transitionCurves) &&
           other.colorSpace == colorSpace &&
+          other.outputColorSpace == outputColorSpace &&
           other.samplesPerTransition == samplesPerTransition;
 
   @override
@@ -150,6 +164,7 @@ class EasingRadialGradient extends RadialGradient {
     curve,
     transitionCurves == null ? null : Object.hashAll(transitionCurves!),
     colorSpace,
+    outputColorSpace,
     samplesPerTransition,
   );
 
@@ -158,6 +173,7 @@ class EasingRadialGradient extends RadialGradient {
       'EasingRadialGradient(center: $center, radius: $radius, '
       'sourceColors: $sourceColors, sourceStops: $sourceStops, curve: $curve, '
       'transitionCurves: $transitionCurves, colorSpace: ${colorSpace.name}, '
+      'outputColorSpace: ${outputColorSpace.name}, '
       'samplesPerTransition: $samplesPerTransition, tileMode: $tileMode, '
       'focal: $focal, focalRadius: $focalRadius, transform: $transform, '
       'generatedStops: ${colors.length})';

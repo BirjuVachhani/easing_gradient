@@ -16,6 +16,10 @@ docs/plans/
 /tool/optimize_readme_images.py
 /tool/fonts/
 
+# Repository-only reference recordings used while building the example site.
+*.mp4
+*.mov
+
 # Editor and operating-system files
 .DS_Store
 Thumbs.db

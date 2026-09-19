@@ -30,14 +30,14 @@ Add the package and import its public library:
 
 ```yaml
 dependencies:
-  easing_gradient: ^0.1.0
+  easing_gradient: ^0.2.0
 ```
 
 ```dart
 import 'package:easing_gradient/easing_gradient.dart';
 ```
 
-Version 0.1.0 requires Flutter 3.47.1 or newer, which includes Dart 3.13.1. Although the floating-point `Color` API used by the package appeared earlier, Flutter 3.47.1 is the first stable SDK matching the package's Dart constraint.
+Version 0.2.0 requires Flutter 3.47.1 or newer, which includes Dart 3.13.1. Although the floating-point `Color` API used by the package appeared earlier, Flutter 3.47.1 is the first stable SDK matching the package's Dart constraint.
 
 The package uses Flutter's cross-platform painting APIs and supports Android, iOS, web, macOS, Windows, and Linux wherever Flutter's corresponding native gradient shaders are available.
 
@@ -143,7 +143,21 @@ Every preview below runs the same blue to yellow fade with `Curves.linear`, so o
 | `srgb` | ![Blue to yellow through a darker gray midpoint](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/space-srgb.webp) | Native RGB-coordinate parity for opaque or equal-alpha endpoints. Differing alpha intentionally uses alpha-aware interpolation. |
 | `hsl` | ![Blue to yellow sweeping through saturated cyan and green](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/space-hsl.webp) | Familiar CSS-style hue interpolation. Not perceptually uniform. |
 
-Wide-gamut inputs are converted to sRGB before mixing. Output is sRGB because that is the common denominator accepted by Flutter's native gradient shaders. This conversion is lossy for colors outside sRGB. Intermediate output is independently channel-clipped rather than perceptually gamut-mapped, so highly chromatic paths can lose chroma or shift hue.
+Output defaults to sRGB for compatibility. Set `outputColorSpace: ColorSpace.displayP3` or `ColorSpace.extendedSRGB` on a gradient, `easeColorStops`, or `mixColors` to opt into wide-gamut output. This is separate from `colorSpace`, which selects the interpolation math. Wide-gamut paths retain extended-sRGB working coordinates and convert to the output primaries before any bounded-gamut clipping. HSL still uses bounded sRGB working coordinates for CSS-style semantics; choosing P3 output does not make HSL interpolation gamut-preserving.
+
+```dart
+final gradient = EasingLinearGradient(
+  colors: const [
+    Color.from(alpha: 1, red: 1, green: 0, blue: 0,
+      colorSpace: ColorSpace.displayP3),
+    Color.from(alpha: 1, red: 0, green: 1, blue: 0,
+      colorSpace: ColorSpace.displayP3),
+  ],
+  outputColorSpace: ColorSpace.displayP3,
+);
+```
+
+Native Flutter can accept floating-point wide-gamut gradient colors, but preservation through rendering depends on the backend and display. In the inspected Flutter 3.47.4 SDK, native Skia and web gradient adapters still pack colors into 8-bit channels. P3 is not a remedy for alpha-mask banding. Bounded outputs use channel clipping, not perceptual gamut mapping; extended-sRGB output keeps out-of-range RGB values.
 
 ## Hard bands with StepsCurve
 
@@ -227,25 +241,25 @@ Swap `begin` and `end` for `Alignment.centerLeft` and `Alignment.centerRight` to
 
 Build both gradients outside the callbacks and only call `createShader` inside them, as above. `ShaderMask` asks for a shader on every paint, so constructing an easing gradient inside a callback would resample the curve on every frame of a scroll.
 
-The example app's Edge fade tab has a live version with controls for the fade extent and curve, plus a side-by-side comparison against a linear mask.
+The example app's Edge fade tab has controls for fade extent, curve, native sample count, and black/white backgrounds. Enable the alpha-dithering experiment to compare analytic masks with and without alpha noise.
 
 ## Accuracy and performance
 
 The package deliberately uses sampled native gradients instead of a custom fragment shader.
 
-Sampling happens synchronously every time a factory or `easeColorStops` is called. Painting a retained instance calls the unchanged Flutter `LinearGradient`, `RadialGradient` or `SweepGradient` shader path, so there is no curve evaluation or color conversion per frame. GPU cost is the same as a hand-written gradient with the same number of stops, and Flutter keeps its native gradient dithering, which helps hide banding on large dark fades. Cache or hoist stable gradients when creating many of them in frequently rebuilt code.
+Sampling happens synchronously every time a factory or `easeColorStops` is called. Painting a retained instance calls the unchanged Flutter `LinearGradient`, `RadialGradient` or `SweepGradient` shader path, so there is no curve evaluation or color conversion per frame. GPU work follows the same path as a hand-written gradient with identical stops. Precision and dithering depend on the renderer and render target; native rendering is not a guarantee of band-free output. In particular, RGB dithering cannot smooth the alpha of a `BlendMode.dstIn` mask. Cache or hoist stable gradients when creating many of them in frequently rebuilt code.
 
-Automated tests compare the sampled result against an exact 2,049-position CPU reference using Flutter's native straight-RGBA stop interpolation, then compare the premultiplied visible output. Fully transparent endpoints receive a zero-width limiting-color stop before the caller's exact endpoint, preventing hidden RGB from leaking into the final interval. For the recommended defaults (`Curves.easeInOut`, OKLab, 15 extra stops), worst visible channel error stays below one 8-bit color step on a demanding color-to-transparent fade. sRGB and linear RGB do too.
+Automated tests compare generated stops with a 2,049-position CPU model of straight-RGBA interpolation, including alpha and premultiplied channel error. The below-one-8-bit-step result applies to one tested `easeInOut` opacity fade in three rectangular spaces. It is not a perceptual threshold or evidence that the framebuffer, alpha mask, or physical display cannot band. The reference shares the production color mixer and does not independently validate color conversion.
 
-There is no honest universal bound for every input. Polar spaces (OKLCH and HSL), out-of-gamut colors and sharply overshooting curves introduce clipping between samples. Raise `samplesPerTransition` to 31 or 63 when using `Curves.easeInOutQuint`, elastic/back curves or highly saturated OKLCH paths. The example app's Accuracy Lab draws the sampled result, an exact per-column CPU reference and an amplified difference strip so the tradeoff is directly visible.
+There is no universal bound for every input. More samples can improve curve and color-path approximation, but cannot restore precision lost later in rendering or display conversion. The example Accuracy Lab compares uniform, dense uniform, Bézier-parameter, and bounded error-driven sampling. It uses nonoverlapping physical-pixel reference columns and includes alpha plus compositing against explicit backgrounds in its model residual. The experimental placement strategies do not change the package default.
 
 | `samplesPerTransition: 3` | `samplesPerTransition: 15` |
 | :---: | :---: |
 | ![A sharply eased fade showing flat facets where straight segments meet](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/density-coarse.webp) | ![The same fade at the default sample count, with no visible facets](https://raw.githubusercontent.com/BirjuVachhani/easing_gradient/main/doc/images/density-default.webp) |
 
-Both strips use `Curves.easeInOutQuint`, whose steep middle is where a piecewise-linear approximation shows up first. Three interior samples leave visible flat facets. The default of fifteen does not.
+Both strips use `Curves.easeInOutQuint`, whose steep middle exposes piecewise-linear approximation. Fifteen interior samples improve this preview over three; appearance still depends on scale, rendering, and display conditions.
 
-A CPU color lookup texture was rejected because it loses native dithering and needs image lifecycle management. An analytic fragment shader was rejected because it cannot support arbitrary Dart `Curve` implementations, adds per-pixel math, needs async asset precaching and requires backend-specific testing. Both add more complexity for worse practical tradeoffs on the normal path.
+The stable library remains shader-asset-free. The example Edge fade tab includes a narrow analytic cubic alpha-mask experiment with adjustable, stationary alpha noise and an otherwise identical zero-noise control. It tests a possible banding remedy, not a general color renderer or a verified fix for every display. Full analytic and lookup-texture renderers remain unimplemented.
 
 Reproduce the device benchmark from the example directory:
 
@@ -263,7 +277,7 @@ The harness writes raw JSON to `example/build/performance/gradient_benchmark.jso
 
 The inherited `colors` and `stops` fields contain the generated dense lists. The compact inputs are available as `sourceColors` and `sourceStops`.
 
-Inherited operations such as `withOpacity`, `scale` and gradient interpolation return Flutter's base gradient type. They preserve the generated stops, so the eased appearance remains. Interpolating gradients containing duplicated `StepsCurve` stops can soften a hard edge during the middle of the animation because Flutter merges duplicate positions when it builds the union of both stop lists.
+Inherited operations such as `withOpacity`, `scale` and gradient interpolation return Flutter's base gradient type. They preserve the generated stops, so the eased appearance remains. Flutter 3.47.4's inherited operations that call `Color.lerp` do not support extended-sRGB colors in debug mode. Rebuild from source configuration for those outputs instead of assuming inherited scaling/interpolation preserves them. Interpolating gradients containing duplicated `StepsCurve` stops can soften a hard edge during the middle of the animation because Flutter merges duplicate positions when it builds the union of both stop lists.
 
 ## Maintainer documentation
 

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ColorSpace;
 
 import 'package:flutter/animation.dart';
 
@@ -60,6 +61,10 @@ const int defaultSamplesPerTransition = 15;
 /// * [transitionCurves] maps by transition index: entry `i` controls
 ///   `colors[i]` to `colors[i + 1]`; null falls back to [curve].
 /// * [colorSpace] selects the path used to calculate intermediate colors.
+/// * [outputColorSpace] selects generated color encoding, independently of the
+///   mixing path. sRGB preserves the historical behavior. Display P3 and
+///   extended sRGB opt into wide-gamut calculation, including endpoint guards
+///   and hard edges. See [mixColors] for clipping and HSL limitations.
 /// * [samplesPerTransition] requests interior samples for each positive-width,
 ///   non-stepped transition. Raise it for sharp curves or gamut-clipped paths.
 ///
@@ -82,6 +87,7 @@ EasedColorStops easeColorStops({
   Curve curve = Curves.easeInOut,
   List<Curve?>? transitionCurves,
   EasingColorSpace colorSpace = EasingColorSpace.oklab,
+  ColorSpace outputColorSpace = ColorSpace.sRGB,
   int samplesPerTransition = defaultSamplesPerTransition,
 }) {
   assert(
@@ -105,13 +111,27 @@ EasedColorStops easeColorStops({
     'at all. Got $samplesPerTransition.',
   );
 
+  // Only opt-in output normalizes the historical raw endpoint emission paths.
+  Color endpoint(Color color) => outputColorSpace == ColorSpace.sRGB
+      ? color
+      : mixColors(
+          color,
+          color,
+          0,
+          colorSpace,
+          outputColorSpace: outputColorSpace,
+        );
+
   // Defensive fallbacks so a release build degrades instead of crashing.
   if (colors.length < 2) {
     final Color single = colors.isEmpty
         ? const Color(0x00000000)
         : colors.first;
     return (
-      colors: List<Color>.unmodifiable(<Color>[single, single]),
+      colors: List<Color>.unmodifiable(<Color>[
+        endpoint(single),
+        endpoint(single),
+      ]),
       stops: List<double>.unmodifiable(<double>[0.0, 1.0]),
     );
   }
@@ -155,8 +175,8 @@ EasedColorStops easeColorStops({
 
     if (end <= start) {
       // A zero width transition is a hard edge the caller asked for.
-      emit(start, from);
-      emit(start, to);
+      emit(start, endpoint(from));
+      emit(start, endpoint(to));
       continue;
     }
 
@@ -169,6 +189,7 @@ EasedColorStops easeColorStops({
         start: start,
         end: end,
         colorSpace: colorSpace,
+        outputColorSpace: outputColorSpace,
       );
       continue;
     }
@@ -180,7 +201,13 @@ EasedColorStops easeColorStops({
       // exactly 1.0, which Curve.transform relies on to return the end value.
       final double progress = step / divisions;
       final double eased = activeCurve.transform(progress);
-      Color color = mixColors(from, to, eased, colorSpace);
+      Color color = mixColors(
+        from,
+        to,
+        eased,
+        colorSpace,
+        outputColorSpace: outputColorSpace,
+      );
 
       // Native Flutter gradients interpolate supplied stops in straight RGBA
       // and premultiply only after that interpolation. A fully transparent stop
@@ -197,8 +224,9 @@ EasedColorStops easeColorStops({
           to,
           activeCurve.transform(1 / divisions),
           colorSpace,
+          outputColorSpace: outputColorSpace,
         );
-        emit(start, from);
+        emit(start, endpoint(from));
         emit(start, firstInterior.withValues(alpha: 0));
       } else {
         emit(_locationAt(start, end, progress), color);
@@ -226,6 +254,7 @@ void _emitSteps({
   required double start,
   required double end,
   required EasingColorSpace colorSpace,
+  required ColorSpace outputColorSpace,
 }) {
   final int count = curve.count;
   for (int band = 0; band < count; band++) {
@@ -234,6 +263,7 @@ void _emitSteps({
       to,
       curve.stepValue(band),
       colorSpace,
+      outputColorSpace: outputColorSpace,
     );
     emit(_locationAt(start, end, band / count), bandColor);
     emit(_locationAt(start, end, (band + 1) / count), bandColor);
@@ -241,7 +271,16 @@ void _emitSteps({
   // For jump-end and jump-both the value at the very end differs from the last
   // band, which is the final jump. Otherwise this repeats the last stop and the
   // caller's dedup drops it.
-  emit(end, mixColors(from, to, curve.stepValue(count), colorSpace));
+  emit(
+    end,
+    mixColors(
+      from,
+      to,
+      curve.stepValue(count),
+      colorSpace,
+      outputColorSpace: outputColorSpace,
+    ),
+  );
 }
 
 /// Positions a sample within a transition, pinning the ends so the first and
