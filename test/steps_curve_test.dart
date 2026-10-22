@@ -43,7 +43,7 @@ void main() {
         () => StepsCurve(1, position: StepPosition.jumpNone),
         throwsAssertionError,
       );
-      expect(() => StepsCurve(4).stepValue(5), throwsRangeError);
+      expect(() => const StepsCurve(4).stepValue(5), throwsRangeError);
     });
 
     test('sampler emits duplicated positions for exact hard edges', () {

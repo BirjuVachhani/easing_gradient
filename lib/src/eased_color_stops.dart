@@ -201,7 +201,7 @@ EasedColorStops easeColorStops({
       // exactly 1.0, which Curve.transform relies on to return the end value.
       final double progress = step / divisions;
       final double eased = activeCurve.transform(progress);
-      Color color = mixColors(
+      final Color color = mixColors(
         from,
         to,
         eased,
