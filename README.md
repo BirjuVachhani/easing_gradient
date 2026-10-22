@@ -1,8 +1,14 @@
 # easing_gradient
 
+[![Website](https://img.shields.io/badge/website-live_demo-0A7CFF?logo=googlechrome&logoColor=white)](https://birjuvachhani.github.io/easing_gradient/)
+[![pub package](https://img.shields.io/pub/v/easing_gradient)](https://pub.dev/packages/easing_gradient)
+[![License: BSD-3-Clause](https://img.shields.io/badge/license-BSD--3--Clause-blue)](https://github.com/BirjuVachhani/easing_gradient/blob/main/LICENSE)
+
 Silky smooth, dependency-free Flutter gradients shaped by any `Curve`.
 
 Flutter's native gradients interpolate colors linearly. That is fast, but it makes the beginning and end of a fade visibly hard, whether you are dissolving a photograph into a card or laying a dark scrim behind text. `easing_gradient` precomputes a small set of intermediate stops that trace an easing curve, then hands those stops back to Flutter's native gradient shader.
+
+**[Website and live demo](https://birjuvachhani.github.io/easing_gradient/)**: compare native and eased gradients side by side, try curves in the [playground](https://birjuvachhani.github.io/easing_gradient/playground), and read the [docs](https://birjuvachhani.github.io/easing_gradient/docs).
 
 | Flutter `LinearGradient` | `EasingLinearGradient` |
 | :---: | :---: |
@@ -263,7 +269,7 @@ Swap `begin` and `end` for `Alignment.centerLeft` and `Alignment.centerRight` to
 
 Build both gradients outside the callbacks and only call `createShader` inside them, as above. `ShaderMask` asks for a shader on every paint, so constructing an easing gradient inside a callback would resample the curve on every frame of a scroll.
 
-The example app's Edge fade tab has controls for fade extent, curve, native sample count, and black/white backgrounds. Enable the alpha-dithering experiment to compare analytic masks with and without alpha noise.
+The example site's [Edge fade page](https://birjuvachhani.github.io/easing_gradient/edge-fade) has controls for fade extent, curve, native sample count, and black/white backgrounds. Enable the alpha-dithering experiment to compare analytic masks with and without alpha noise.
 
 ## Accuracy and performance
 
@@ -273,7 +279,7 @@ Sampling happens synchronously every time a factory or `easeColorStops` is calle
 
 Automated tests compare generated stops with a 2,049-position CPU model of straight-RGBA interpolation, including alpha and premultiplied channel error. The below-one-8-bit-step result applies to one tested `easeInOut` opacity fade in three rectangular spaces. It is not a perceptual threshold or evidence that the framebuffer, alpha mask, or physical display cannot band. The reference shares the production color mixer and does not independently validate color conversion.
 
-There is no universal bound for every input. More samples can improve curve and color-path approximation, but cannot restore precision lost later in rendering or display conversion. The example Accuracy Lab compares uniform, dense uniform, Bézier-parameter, and bounded error-driven sampling. It uses nonoverlapping physical-pixel reference columns and includes alpha plus compositing against explicit backgrounds in its model residual. The experimental placement strategies do not change the package default.
+There is no universal bound for every input. More samples can improve curve and color-path approximation, but cannot restore precision lost later in rendering or display conversion. The example site's [Accuracy Lab](https://birjuvachhani.github.io/easing_gradient/accuracy) compares uniform, dense uniform, Bézier-parameter, and bounded error-driven sampling. It uses nonoverlapping physical-pixel reference columns and includes alpha plus compositing against explicit backgrounds in its model residual. The experimental placement strategies do not change the package default.
 
 | `samplesPerTransition: 3` | `samplesPerTransition: 15` |
 | :---: | :---: |
